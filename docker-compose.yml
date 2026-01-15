@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (optional - for production)
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_USER: milkbank
+  #     POSTGRES_PASSWORD: secure_password
+  #     POSTGRES_DB: milkbank
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./milkbank.db
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./src:/app/src
+      - ./milkbank.db:/app/milkbank.db
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - frontend
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    command: npm run dev
+
+volumes:
+  postgres_data:

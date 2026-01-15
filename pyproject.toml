@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "milkbank"
+version = "0.1.0"
+description = "Traceable milk bank backend"
+authors = ["Your Team <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.101.0"
+uvicorn = {extras=["standard"], version="^0.22.0"}
+SQLAlchemy = "^2.0"
+psycopg2-binary = "^2.9"
+alembic = "^1.10"
+python-dotenv = "^1.0"
+pydantic = "^1.10"
+python-barcode = "^0.14"
+qrcode = "^7.3"
+transitions = "^0.10"
+pytest = {extras=["cov"], version="^7.0"}
+
+[tool.poetry.dev-dependencies]
+black = "^24.3"
+ruff = "^0.13"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

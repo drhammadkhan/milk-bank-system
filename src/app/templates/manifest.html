@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Dispatch Manifest</title>
+  </head>
+  <body>
+    <h1>Dispatch {{ manifest.dispatch_code }} ({{ manifest.dispatch_id }})</h1>
+    <p>Hospital: {{ manifest.hospital_id }} | Shipper: {{ manifest.shipper }} | Status: {{ manifest.status }}</p>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr><th>Barcode</th><th>Scanned Out</th><th>Scanned In</th><th>Storage</th></tr>
+      </thead>
+      <tbody>
+        {% for it in manifest.items %}
+        <tr>
+          <td>{{ it.barcode }}</td>
+          <td>{{ it.scanned_out }}</td>
+          <td>{{ it.scanned_in }}</td>
+          <td>{{ it.storage_location }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>
