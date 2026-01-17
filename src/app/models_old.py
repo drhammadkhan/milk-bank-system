@@ -27,29 +27,16 @@ class Donor(Base):
     status = Column(Enum(DonorStatus), nullable=False, default=DonorStatus.Applied)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Donor Details Section
-    hospital_number = Column(String)
+    # Personal Information
     first_name = Column(String)
     last_name = Column(String)
     date_of_birth = Column(DateTime(timezone=True))
     phone_number = Column(String)
-    mobile_number = Column(String)
+    email = Column(String)
     
     # Address Information
     address = Column(String)
     postcode = Column(String)
-    
-    # GP Information
-    gp_name = Column(String)
-    gp_address = Column(String)
-    
-    # Additional Donor Information
-    marital_status = Column(String)  # Single, Married, etc.
-    number_of_children = Column(Integer, default=0)
-    enrolment_date = Column(DateTime(timezone=True))
-    previous_donor = Column(Boolean, default=False)
-    partner_name = Column(String)
-    email = Column(String)
     
     # Medical History Flags (boolean indicators)
     infectious_diseases = Column(Boolean, default=False)
@@ -61,78 +48,9 @@ class Donor(Base):
     hltv_antibody = Column(Boolean, default=False)
     syphilis_test = Column(Boolean, default=False)
     
-    # Detailed Medical History
-    hepatitis_jaundice_liver = Column(Boolean, default=False)
-    hepatitis_jaundice_liver_details = Column(String, nullable=True)
-    hepatitis_jaundice_liver_date = Column(DateTime(timezone=True), nullable=True)
-    history_of_tb = Column(Boolean, default=False)
-    history_of_tb_date = Column(DateTime(timezone=True), nullable=True)
-    polio_rubella_vaccination_4weeks = Column(Boolean, default=False)
-    polio_rubella_vaccination_date = Column(DateTime(timezone=True), nullable=True)
-    human_pituitary_growth_hormone = Column(Boolean, default=False)
-    human_pituitary_growth_hormone_date = Column(DateTime(timezone=True), nullable=True)
-    serious_illness_last_year = Column(Boolean, default=False)
-    serious_illness_last_year_details = Column(String, nullable=True)
-    current_medications = Column(String, nullable=True)
-    
     # Serological Test Results (JSON for flexibility)
     serological_tests = Column(JSON, default={})
     medical_history_notes = Column(String)
-
-    # Baby Details (optional)
-    baby_name = Column(String, nullable=True)
-    baby_place_of_birth = Column(String, nullable=True)
-    baby_birth_weight_g = Column(Integer, nullable=True)
-    baby_gestational_age_weeks = Column(Integer, nullable=True)
-    baby_dob = Column(DateTime(timezone=True), nullable=True)
-    baby_admitted_to_nicu = Column(Boolean, default=False)
-
-    # Lifestyle
-    tattoo = Column(Boolean, default=False)
-    tattoo_date = Column(DateTime(timezone=True), nullable=True)
-    unusual_diet = Column(String, nullable=True)
-    smoker = Column(Boolean, default=False)
-    alcohol_units_per_day = Column(Integer, nullable=True)
-
-    # Serological Testing
-    initial_blood_test_date = Column(DateTime(timezone=True), nullable=True)
-    initial_hiv1_result = Column(String, nullable=True)
-    initial_hiv2_result = Column(String, nullable=True)
-    initial_htlv1_result = Column(String, nullable=True)
-    initial_htlv2_result = Column(String, nullable=True)
-    initial_hep_b_result = Column(String, nullable=True)
-    initial_hep_c_result = Column(String, nullable=True)
-    initial_syphilis_result = Column(String, nullable=True)
-    
-    repeat_blood_test_date = Column(DateTime(timezone=True), nullable=True)
-    repeat_hiv1_result = Column(String, nullable=True)
-    repeat_hiv2_result = Column(String, nullable=True)
-    repeat_htlv1_result = Column(String, nullable=True)
-    repeat_htlv2_result = Column(String, nullable=True)
-    repeat_hep_b_result = Column(String, nullable=True)
-    repeat_hep_c_result = Column(String, nullable=True)
-    repeat_syphilis_result = Column(String, nullable=True)
-    
-    final_blood_test_status = Column(String, nullable=True)
-
-    # Post-Testing Information
-    one_off_donation = Column(Boolean, default=False)
-    appointment_for_next_blood_test = Column(Boolean, default=False)
-    appointment_blood_test_datetime = Column(DateTime(timezone=True), nullable=True)
-    information_leaflets_given = Column(Boolean, default=False)
-    leaflet_donating_milk = Column(Boolean, default=False)
-    leaflet_blood_tests = Column(Boolean, default=False)
-    leaflet_hygeine = Column(Boolean, default=False)
-
-    # Checklist
-    checklist_consent_form = Column(Boolean, default=False)
-    checklist_donation_record_complete = Column(Boolean, default=False)
-    checklist_given_bottles_labels = Column(Boolean, default=False)
-    checklist_collection_explained = Column(Boolean, default=False)
-    checklist_bloods_taken = Column(Boolean, default=False)
-
-    # Comments
-    comments = Column(String, nullable=True)
 
 
 class DonationStatus(enum.Enum):

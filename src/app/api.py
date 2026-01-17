@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from . import crud, schemas
 from .database import SessionLocal, engine, Base
 
@@ -22,7 +23,41 @@ def get_db():
 
 @router.post("/donors", response_model=schemas.DonorRead)
 def create_donor(donor: schemas.DonorCreate, db: Session = Depends(get_db)):
-    return crud.create_donor(db, donor)
+    try:
+        return crud.create_donor(db, donor)
+    except IntegrityError as e:
+        db.rollback()
+        if "donor_code" in str(e):
+            raise HTTPException(status_code=400, detail="Donor code already exists")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/donors")
+def list_donors(db: Session = Depends(get_db)):
+    return crud.get_all_donors(db)
+
+
+@router.get("/donors/{donor_id}", response_model=schemas.DonorRead)
+def get_donor(donor_id: str, db: Session = Depends(get_db)):
+    d = crud.get_donor(db, donor_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Donor not found")
+    return d
+
+
+@router.put("/donors/{donor_id}", response_model=schemas.DonorRead)
+def update_donor(donor_id: str, donor: schemas.DonorCreate, db: Session = Depends(get_db)):
+    try:
+        d = crud.update_donor(db, donor_id, donor)
+        if not d:
+            raise HTTPException(status_code=404, detail="Donor not found")
+        return d
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/donors/{donor_id}/approve", response_model=schemas.DonorRead)
@@ -44,6 +79,19 @@ def create_donation(donation: schemas.DonationCreate, db: Session = Depends(get_
     return d
 
 
+@router.get("/donations")
+def list_donations(db: Session = Depends(get_db)):
+    return crud.get_all_donations(db)
+
+
+@router.get("/donations/{donation_id}", response_model=schemas.DonationRead)
+def get_donation(donation_id: str, db: Session = Depends(get_db)):
+    d = crud.get_donation(db, donation_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Donation not found")
+    return d
+
+
 @router.post("/batches")
 def create_batch(payload: dict, db: Session = Depends(get_db)):
     # payload: {"donation_ids": [..], "batch_code": ".."}
@@ -52,6 +100,19 @@ def create_batch(payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"id": batch.id, "batch_code": batch.batch_code}
+
+
+@router.get("/batches")
+def list_batches(db: Session = Depends(get_db)):
+    return crud.get_all_batches(db)
+
+
+@router.get("/batches/{batch_id}")
+def get_batch(batch_id: str, db: Session = Depends(get_db)):
+    b = crud.get_batch(db, batch_id)
+    if not b:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    return b
 
 
 @router.post("/donations/{donation_id}/accept")
@@ -137,6 +198,19 @@ def create_bottles(batch_id: str, payload: dict, db: Session = Depends(get_db)):
     return {"bottles": [b.id for b in bottles]}
 
 
+@router.get("/bottles")
+def list_bottles(db: Session = Depends(get_db)):
+    return crud.get_all_bottles(db)
+
+
+@router.get("/bottles/{bottle_id}")
+def get_bottle(bottle_id: str, db: Session = Depends(get_db)):
+    b = crud.get_bottle(db, bottle_id)
+    if not b:
+        raise HTTPException(status_code=404, detail="Bottle not found")
+    return b
+
+
 @router.post("/dispatches")
 def create_dispatch(payload: dict, db: Session = Depends(get_db)):
     try:
@@ -144,6 +218,19 @@ def create_dispatch(payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"id": d.id, "dispatch_code": d.dispatch_code}
+
+
+@router.get("/dispatches")
+def list_dispatches(db: Session = Depends(get_db)):
+    return crud.get_all_dispatches(db)
+
+
+@router.get("/dispatches/{dispatch_id}")
+def get_dispatch(dispatch_id: str, db: Session = Depends(get_db)):
+    d = crud.get_dispatch(db, dispatch_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+    return d
 
 
 @router.post("/dispatches/{dispatch_id}/scan")

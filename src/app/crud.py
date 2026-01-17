@@ -19,7 +19,94 @@ def _create_audit(db: Session, user_id: str, operation: str, entity_type: str, e
 
 
 def create_donor(db: Session, donor: schemas.DonorCreate, user_id: str = None):
-    db_d = models.Donor(donor_code=donor.donor_code)
+    db_d = models.Donor(
+        donor_code=getattr(donor, 'donor_code', None),
+        hospital_number=donor.hospital_number,
+        first_name=donor.first_name,
+        last_name=donor.last_name,
+        date_of_birth=donor.date_of_birth,
+        phone_number=donor.phone_number,
+        mobile_number=donor.mobile_number,
+        address=donor.address,
+        postcode=donor.postcode,
+        gp_name=donor.gp_name,
+        gp_address=donor.gp_address,
+        marital_status=donor.marital_status,
+        number_of_children=donor.number_of_children or 0,
+        enrolment_date=donor.enrolment_date,
+        previous_donor=donor.previous_donor,
+        partner_name=donor.partner_name,
+        email=donor.email,
+        infectious_diseases=donor.infectious_diseases,
+        hepatitis_history=donor.hepatitis_history,
+        hepatitis_b_surface_antigen=donor.hepatitis_b_surface_antigen,
+        hepatitis_b_core_antigen=donor.hepatitis_b_core_antigen,
+        hepatitis_c_antibody=donor.hepatitis_c_antibody,
+        hiv_antibody=donor.hiv_antibody,
+        hltv_antibody=donor.hltv_antibody,
+        syphilis_test=donor.syphilis_test,
+        medical_history_notes=donor.medical_history_notes,
+        # Detailed Medical History
+        hepatitis_jaundice_liver=getattr(donor, 'hepatitis_jaundice_liver', False),
+        hepatitis_jaundice_liver_details=getattr(donor, 'hepatitis_jaundice_liver_details', None),
+        hepatitis_jaundice_liver_date=getattr(donor, 'hepatitis_jaundice_liver_date', None),
+        history_of_tb=getattr(donor, 'history_of_tb', False),
+        history_of_tb_date=getattr(donor, 'history_of_tb_date', None),
+        polio_rubella_vaccination_4weeks=getattr(donor, 'polio_rubella_vaccination_4weeks', False),
+        polio_rubella_vaccination_date=getattr(donor, 'polio_rubella_vaccination_date', None),
+        human_pituitary_growth_hormone=getattr(donor, 'human_pituitary_growth_hormone', False),
+        human_pituitary_growth_hormone_date=getattr(donor, 'human_pituitary_growth_hormone_date', None),
+        serious_illness_last_year=getattr(donor, 'serious_illness_last_year', False),
+        serious_illness_last_year_details=getattr(donor, 'serious_illness_last_year_details', None),
+        current_medications=getattr(donor, 'current_medications', None),
+        # Lifestyle
+        tattoo=getattr(donor, 'tattoo', False),
+        tattoo_date=getattr(donor, 'tattoo_date', None),
+        unusual_diet=getattr(donor, 'unusual_diet', None),
+        smoker=getattr(donor, 'smoker', False),
+        alcohol_units_per_day=getattr(donor, 'alcohol_units_per_day', None),
+        # Serological Testing
+        initial_blood_test_date=getattr(donor, 'initial_blood_test_date', None),
+        initial_hiv1_result=getattr(donor, 'initial_hiv1_result', None),
+        initial_hiv2_result=getattr(donor, 'initial_hiv2_result', None),
+        initial_htlv1_result=getattr(donor, 'initial_htlv1_result', None),
+        initial_htlv2_result=getattr(donor, 'initial_htlv2_result', None),
+        initial_hep_b_result=getattr(donor, 'initial_hep_b_result', None),
+        initial_hep_c_result=getattr(donor, 'initial_hep_c_result', None),
+        initial_syphilis_result=getattr(donor, 'initial_syphilis_result', None),
+        repeat_blood_test_date=getattr(donor, 'repeat_blood_test_date', None),
+        repeat_hiv1_result=getattr(donor, 'repeat_hiv1_result', None),
+        repeat_hiv2_result=getattr(donor, 'repeat_hiv2_result', None),
+        repeat_htlv1_result=getattr(donor, 'repeat_htlv1_result', None),
+        repeat_htlv2_result=getattr(donor, 'repeat_htlv2_result', None),
+        repeat_hep_b_result=getattr(donor, 'repeat_hep_b_result', None),
+        repeat_hep_c_result=getattr(donor, 'repeat_hep_c_result', None),
+        repeat_syphilis_result=getattr(donor, 'repeat_syphilis_result', None),
+        final_blood_test_status=getattr(donor, 'final_blood_test_status', None),
+        # Baby details
+        baby_name=getattr(donor, 'baby_name', None),
+        baby_place_of_birth=getattr(donor, 'baby_place_of_birth', None),
+        baby_birth_weight_g=getattr(donor, 'baby_birth_weight_g', None),
+        baby_gestational_age_weeks=getattr(donor, 'baby_gestational_age_weeks', None),
+        baby_dob=getattr(donor, 'baby_dob', None),
+        baby_admitted_to_nicu=getattr(donor, 'baby_admitted_to_nicu', False),
+        # Post-Testing Information
+        one_off_donation=getattr(donor, 'one_off_donation', False),
+        appointment_for_next_blood_test=getattr(donor, 'appointment_for_next_blood_test', False),
+        appointment_blood_test_datetime=getattr(donor, 'appointment_blood_test_datetime', None),
+        information_leaflets_given=getattr(donor, 'information_leaflets_given', False),
+        leaflet_donating_milk=getattr(donor, 'leaflet_donating_milk', False),
+        leaflet_blood_tests=getattr(donor, 'leaflet_blood_tests', False),
+        leaflet_hygeine=getattr(donor, 'leaflet_hygeine', False),
+        # Checklist
+        checklist_consent_form=getattr(donor, 'checklist_consent_form', False),
+        checklist_donation_record_complete=getattr(donor, 'checklist_donation_record_complete', False),
+        checklist_given_bottles_labels=getattr(donor, 'checklist_given_bottles_labels', False),
+        checklist_collection_explained=getattr(donor, 'checklist_collection_explained', False),
+        checklist_bloods_taken=getattr(donor, 'checklist_bloods_taken', False),
+        # Comments
+        comments=getattr(donor, 'comments', None),
+    )
     db.add(db_d)
     db.commit()
     db.refresh(db_d)
@@ -28,8 +115,143 @@ def create_donor(db: Session, donor: schemas.DonorCreate, user_id: str = None):
     return db_d
 
 
+def update_donor(db: Session, donor_id: str, donor_update: schemas.DonorCreate, user_id: str = None):
+    db_d = get_donor(db, donor_id)
+    if not db_d:
+        return None
+    before = {
+        "first_name": db_d.first_name,
+        "last_name": db_d.last_name,
+        "email": db_d.email,
+        "phone_number": db_d.phone_number,
+    }
+    # Update all fields
+    db_d.hospital_number = donor_update.hospital_number
+    db_d.first_name = donor_update.first_name
+    db_d.last_name = donor_update.last_name
+    db_d.date_of_birth = donor_update.date_of_birth
+    db_d.phone_number = donor_update.phone_number
+    db_d.mobile_number = donor_update.mobile_number
+    db_d.address = donor_update.address
+    db_d.postcode = donor_update.postcode
+    db_d.gp_name = donor_update.gp_name
+    db_d.gp_address = donor_update.gp_address
+    db_d.marital_status = donor_update.marital_status
+    db_d.number_of_children = donor_update.number_of_children or 0
+    db_d.enrolment_date = donor_update.enrolment_date
+    db_d.previous_donor = donor_update.previous_donor
+    db_d.partner_name = donor_update.partner_name
+    db_d.email = donor_update.email
+    db_d.infectious_diseases = donor_update.infectious_diseases
+    db_d.hepatitis_history = donor_update.hepatitis_history
+    db_d.hepatitis_b_surface_antigen = donor_update.hepatitis_b_surface_antigen
+    db_d.hepatitis_b_core_antigen = donor_update.hepatitis_b_core_antigen
+    db_d.hepatitis_c_antibody = donor_update.hepatitis_c_antibody
+    db_d.hiv_antibody = donor_update.hiv_antibody
+    db_d.hltv_antibody = donor_update.hltv_antibody
+    db_d.syphilis_test = donor_update.syphilis_test
+    db_d.medical_history_notes = donor_update.medical_history_notes
+    # Detailed Medical History
+    db_d.hepatitis_jaundice_liver = getattr(donor_update, 'hepatitis_jaundice_liver', False)
+    db_d.hepatitis_jaundice_liver_details = getattr(donor_update, 'hepatitis_jaundice_liver_details', None)
+    db_d.hepatitis_jaundice_liver_date = getattr(donor_update, 'hepatitis_jaundice_liver_date', None)
+    db_d.history_of_tb = getattr(donor_update, 'history_of_tb', False)
+    db_d.history_of_tb_date = getattr(donor_update, 'history_of_tb_date', None)
+    db_d.polio_rubella_vaccination_4weeks = getattr(donor_update, 'polio_rubella_vaccination_4weeks', False)
+    db_d.polio_rubella_vaccination_date = getattr(donor_update, 'polio_rubella_vaccination_date', None)
+    db_d.human_pituitary_growth_hormone = getattr(donor_update, 'human_pituitary_growth_hormone', False)
+    db_d.human_pituitary_growth_hormone_date = getattr(donor_update, 'human_pituitary_growth_hormone_date', None)
+    db_d.serious_illness_last_year = getattr(donor_update, 'serious_illness_last_year', False)
+    db_d.serious_illness_last_year_details = getattr(donor_update, 'serious_illness_last_year_details', None)
+    db_d.current_medications = getattr(donor_update, 'current_medications', None)
+    # Lifestyle
+    db_d.tattoo = getattr(donor_update, 'tattoo', False)
+    db_d.tattoo_date = getattr(donor_update, 'tattoo_date', None)
+    db_d.unusual_diet = getattr(donor_update, 'unusual_diet', None)
+    db_d.smoker = getattr(donor_update, 'smoker', False)
+    db_d.alcohol_units_per_day = getattr(donor_update, 'alcohol_units_per_day', None)
+    # Serological Testing
+    db_d.initial_blood_test_date = getattr(donor_update, 'initial_blood_test_date', None)
+    db_d.initial_hiv1_result = getattr(donor_update, 'initial_hiv1_result', None)
+    db_d.initial_hiv2_result = getattr(donor_update, 'initial_hiv2_result', None)
+    db_d.initial_htlv1_result = getattr(donor_update, 'initial_htlv1_result', None)
+    db_d.initial_htlv2_result = getattr(donor_update, 'initial_htlv2_result', None)
+    db_d.initial_hep_b_result = getattr(donor_update, 'initial_hep_b_result', None)
+    db_d.initial_hep_c_result = getattr(donor_update, 'initial_hep_c_result', None)
+    db_d.initial_syphilis_result = getattr(donor_update, 'initial_syphilis_result', None)
+    db_d.repeat_blood_test_date = getattr(donor_update, 'repeat_blood_test_date', None)
+    db_d.repeat_hiv1_result = getattr(donor_update, 'repeat_hiv1_result', None)
+    db_d.repeat_hiv2_result = getattr(donor_update, 'repeat_hiv2_result', None)
+    db_d.repeat_htlv1_result = getattr(donor_update, 'repeat_htlv1_result', None)
+    db_d.repeat_htlv2_result = getattr(donor_update, 'repeat_htlv2_result', None)
+    db_d.repeat_hep_b_result = getattr(donor_update, 'repeat_hep_b_result', None)
+    db_d.repeat_hep_c_result = getattr(donor_update, 'repeat_hep_c_result', None)
+    db_d.repeat_syphilis_result = getattr(donor_update, 'repeat_syphilis_result', None)
+    db_d.final_blood_test_status = getattr(donor_update, 'final_blood_test_status', None)
+    # Baby details
+    db_d.baby_name = getattr(donor_update, 'baby_name', None)
+    db_d.baby_place_of_birth = getattr(donor_update, 'baby_place_of_birth', None)
+    db_d.baby_birth_weight_g = getattr(donor_update, 'baby_birth_weight_g', None)
+    db_d.baby_gestational_age_weeks = getattr(donor_update, 'baby_gestational_age_weeks', None)
+    db_d.baby_dob = getattr(donor_update, 'baby_dob', None)
+    db_d.baby_admitted_to_nicu = getattr(donor_update, 'baby_admitted_to_nicu', False)
+    # Post-Testing Information
+    db_d.one_off_donation = getattr(donor_update, 'one_off_donation', False)
+    db_d.appointment_for_next_blood_test = getattr(donor_update, 'appointment_for_next_blood_test', False)
+    db_d.appointment_blood_test_datetime = getattr(donor_update, 'appointment_blood_test_datetime', None)
+    db_d.information_leaflets_given = getattr(donor_update, 'information_leaflets_given', False)
+    db_d.leaflet_donating_milk = getattr(donor_update, 'leaflet_donating_milk', False)
+    db_d.leaflet_blood_tests = getattr(donor_update, 'leaflet_blood_tests', False)
+    db_d.leaflet_hygeine = getattr(donor_update, 'leaflet_hygeine', False)
+    # Checklist
+    db_d.checklist_consent_form = getattr(donor_update, 'checklist_consent_form', False)
+    db_d.checklist_donation_record_complete = getattr(donor_update, 'checklist_donation_record_complete', False)
+    db_d.checklist_given_bottles_labels = getattr(donor_update, 'checklist_given_bottles_labels', False)
+    db_d.checklist_collection_explained = getattr(donor_update, 'checklist_collection_explained', False)
+    db_d.checklist_bloods_taken = getattr(donor_update, 'checklist_bloods_taken', False)
+    # Comments
+    db_d.comments = getattr(donor_update, 'comments', None)
+    db.add(db_d)
+    _create_audit(db, user_id, "update", "donor", db_d.id, before=before, after={"first_name": db_d.first_name, "last_name": db_d.last_name, "email": db_d.email})
+    db.commit()
+    db.refresh(db_d)
+    return db_d
+
+
 def get_donor(db: Session, donor_id: str):
     return db.query(models.Donor).filter(models.Donor.id == donor_id).first()
+
+
+def get_all_donors(db: Session):
+    return db.query(models.Donor).all()
+
+
+def get_all_donations(db: Session):
+    return db.query(models.Donation).all()
+
+
+def get_all_batches(db: Session):
+    return db.query(models.Batch).all()
+
+
+def get_batch(db: Session, batch_id: str):
+    return db.query(models.Batch).filter(models.Batch.id == batch_id).first()
+
+
+def get_all_bottles(db: Session):
+    return db.query(models.Bottle).all()
+
+
+def get_bottle(db: Session, bottle_id: str):
+    return db.query(models.Bottle).filter(models.Bottle.id == bottle_id).first()
+
+
+def get_all_dispatches(db: Session):
+    return db.query(models.Dispatch).all()
+
+
+def get_dispatch(db: Session, dispatch_id: str):
+    return db.query(models.Dispatch).filter(models.Dispatch.id == dispatch_id).first()
 
 
 def approve_donor(db: Session, donor_id: str, approver_id: str):

@@ -12,6 +12,7 @@ export const donors = {
   create: (data: { donor_code: string }) => API.post('/donors', data),
   list: () => API.get('/donors'),
   get: (id: string) => API.get(`/donors/${id}`),
+  update: (id: string, data: any) => API.put(`/donors/${id}`, data),
   approve: (id: string, data: { approver_id: string }) =>
     API.post(`/donors/${id}/approve`, data),
 };
