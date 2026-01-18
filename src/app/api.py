@@ -48,6 +48,52 @@ def get_donor(donor_id: str, db: Session = Depends(get_db)):
     return d
 
 
+@router.post("/donations", response_model=schemas.DonationRead)
+def create_donation(donation: schemas.DonationCreate, db: Session = Depends(get_db)):
+    try:
+        # Verify donor exists
+        donor = crud.get_donor(db, donation.donor_id)
+        if not donor:
+            raise HTTPException(status_code=404, detail="Donor not found")
+        return crud.create_donation_record(db, donation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/donors/{donor_id}/donations", response_model=list[schemas.DonationRead])
+def get_donor_donations(donor_id: str, db: Session = Depends(get_db)):
+    # Verify donor exists
+    donor = crud.get_donor(db, donor_id)
+    if not donor:
+        raise HTTPException(status_code=404, detail="Donor not found")
+    return crud.get_donation_records_by_donor(db, donor_id)
+
+
+@router.get("/donations", response_model=list[schemas.DonationRead])
+def list_donations(db: Session = Depends(get_db)):
+    return crud.get_all_donation_records(db)
+
+
+@router.get("/donations/unacknowledged", response_model=list[schemas.DonationRead])
+def get_unacknowledged_donations(db: Session = Depends(get_db)):
+    return crud.get_unacknowledged_donations(db)
+
+
+@router.post("/donations/{donation_id}/acknowledge", response_model=schemas.DonationRead)
+def acknowledge_donation(donation_id: str, db: Session = Depends(get_db)):
+    try:
+        donation = crud.acknowledge_donation(db, donation_id)
+        if not donation:
+            raise HTTPException(status_code=404, detail="Donation not found")
+        return donation
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.put("/donors/{donor_id}", response_model=schemas.DonorRead)
 def update_donor(donor_id: str, donor: schemas.DonorCreate, db: Session = Depends(get_db)):
     try:

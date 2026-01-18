@@ -15,19 +15,21 @@ export const donors = {
   update: (id: string, data: any) => API.put(`/donors/${id}`, data),
   approve: (id: string, data: { approver_id: string }) =>
     API.post(`/donors/${id}/approve`, data),
+  getDonations: (id: string) => API.get(`/donors/${id}/donations`),
 };
 
 // Donation endpoints
 export const donations = {
   create: (data: {
-    barcode: string;
     donor_id: string;
-    volume_ml: number;
+    donation_date: string;
+    number_of_bottles: number;
+    notes?: string;
   }) => API.post('/donations', data),
   list: () => API.get('/donations'),
+  listUnacknowledged: () => API.get('/donations/unacknowledged'),
   get: (id: string) => API.get(`/donations/${id}`),
-  accept: (id: string, data: { user_id: string }) =>
-    API.post(`/donations/${id}/accept`, data),
+  acknowledge: (id: string) => API.post(`/donations/${id}/acknowledge`, {}),
 };
 
 // Batch endpoints

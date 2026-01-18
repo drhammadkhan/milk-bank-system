@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { donors } from '../api';
-import { CheckCircle, Plus } from 'lucide-react';
+import { CheckCircle, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Donor {
@@ -10,6 +10,7 @@ interface Donor {
   created_at: string;
   first_name?: string;
   last_name?: string;
+  hospital_number?: string;
   phone_number?: string;
   email?: string;
   date_of_birth?: string;
@@ -19,6 +20,8 @@ export const DonorList: React.FC = () => {
   const [donorList, setDonorList] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchName, setSearchName] = useState('');
+  const [searchHospital, setSearchHospital] = useState('');
 
   useEffect(() => {
     loadDonors();
@@ -49,6 +52,20 @@ export const DonorList: React.FC = () => {
     }
   };
 
+  const filteredDonors = donorList.filter(donor => {
+    const nameMatch = (donor.first_name || '')
+      .toLowerCase()
+      .includes(searchName.toLowerCase()) ||
+      (donor.last_name || '')
+        .toLowerCase()
+        .includes(searchName.toLowerCase());
+    const hospitalMatch = (donor.hospital_number || '')
+      .toLowerCase()
+      .includes(searchHospital.toLowerCase());
+    
+    return (!searchName || nameMatch) && (!searchHospital || hospitalMatch);
+  });
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -68,17 +85,55 @@ export const DonorList: React.FC = () => {
         </div>
       )}
 
+      {/* Search Section */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Search size={20} className="text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Search Donors</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+            <input
+              type="text"
+              placeholder="Search by first or last name..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hospital Number</label>
+            <input
+              type="text"
+              placeholder="Search by hospital number..."
+              value={searchHospital}
+              onChange={(e) => setSearchHospital(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        {(searchName || searchHospital) && (
+          <div className="mt-3 text-sm text-gray-600">
+            Found {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-600">Loading donors...</div>
-        ) : donorList.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">No donors found</div>
+        ) : filteredDonors.length === 0 ? (
+          <div className="p-8 text-center text-gray-600">
+            {donorList.length === 0 ? 'No donors found' : 'No donors match your search'}
+          </div>
         ) : (
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Donor ID</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Hospital Number</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Contact</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Registered</th>
@@ -86,7 +141,7 @@ export const DonorList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {donorList.map((donor, idx) => (
+              {filteredDonors.map((donor, idx) => (
                 <tr key={idx} className="border-b hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm">
                     <Link
@@ -101,6 +156,9 @@ export const DonorList: React.FC = () => {
                     {donor.first_name && donor.last_name
                       ? `${donor.first_name} ${donor.last_name}`
                       : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {donor.hospital_number || '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {donor.phone_number || donor.email || '-'}

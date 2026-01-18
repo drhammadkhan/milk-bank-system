@@ -6,9 +6,11 @@ import {
   Truck,
   AlertCircle,
   Clock,
+  Droplets,
+  Check,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { donors, batches, dispatches } from '../api';
+import { donors, batches, dispatches, donations } from '../api';
 
 interface DashboardStats {
   totalDonors: number;
@@ -26,6 +28,29 @@ export const Dashboard: React.FC = () => {
     dispatchedItems: 0,
     recentActivity: 'Loading...',
   });
+  const [newDonations, setNewDonations] = useState<any[]>([]);
+  const [acknowledging, setAcknowledging] = useState<string | null>(null);
+
+  const loadNewDonations = async () => {
+    try {
+      const res = await donations.listUnacknowledged();
+      setNewDonations(res.data);
+    } catch (error) {
+      console.error('Error loading new donations:', error);
+    }
+  };
+
+  const handleAcknowledge = async (donationId: string) => {
+    try {
+      setAcknowledging(donationId);
+      await donations.acknowledge(donationId);
+      setNewDonations(newDonations.filter(d => d.id !== donationId));
+    } catch (error) {
+      console.error('Error acknowledging donation:', error);
+    } finally {
+      setAcknowledging(null);
+    }
+  };
 
   useEffect(() => {
     const loadStats = async () => {
@@ -43,6 +68,8 @@ export const Dashboard: React.FC = () => {
           dispatchedItems: dispatchRes.data.filter((d: any) => d.status === 'Delivered').length || 0,
           recentActivity: `${donorRes.data.length} donors registered`,
         });
+
+        await loadNewDonations();
       } catch (error) {
         console.error('Error loading stats:', error);
       }
@@ -143,6 +170,55 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* New Donations Alert */}
+      {newDonations.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <Droplets className="text-blue-600" size={28} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-blue-900 mb-1">
+                🎉 New Milk Donations Received!
+              </h3>
+              <p className="text-blue-800 mb-4">
+                The core team has {newDonations.length} new donation{newDonations.length !== 1 ? 's' : ''} to acknowledge:
+              </p>
+              <div className="space-y-3">
+                {newDonations.map((donation: any) => {
+                  const donationDate = new Date(donation.donation_date);
+                  const formattedDate = donationDate.toLocaleDateString();
+                  return (
+                    <div
+                      key={donation.id}
+                      className="bg-white rounded-lg p-3 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          {donation.number_of_bottles} bottle{donation.number_of_bottles !== 1 ? 's' : ''} donated
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {formattedDate}
+                          {donation.notes && ` • ${donation.notes}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleAcknowledge(donation.id)}
+                        disabled={acknowledging === donation.id}
+                        className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                      >
+                        <Check size={18} />
+                        {acknowledging === donation.id ? 'Acknowledging...' : 'Acknowledge'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="bg-white rounded-lg shadow p-6">

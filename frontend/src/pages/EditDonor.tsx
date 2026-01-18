@@ -364,6 +364,471 @@ export const EditDonor: React.FC = () => {
           </div>
         </div>
 
+        {/* Baby Details */}
+        <div className="border-b-2 border-blue-200 pb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-blue-900">Baby Details</h2>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Baby Name</label>
+              <input type="text" name="baby_name" value={formData.baby_name} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Place of Birth</label>
+              <input type="text" name="baby_place_of_birth" value={formData.baby_place_of_birth} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Birth Weight (g)</label>
+              <input type="number" name="baby_birth_weight_g" value={formData.baby_birth_weight_g ?? ''} onChange={handleChange} min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Gestational Age (weeks)</label>
+              <input type="number" name="baby_gestational_age_weeks" value={formData.baby_gestational_age_weeks ?? ''} onChange={handleChange} min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Baby Date of Birth</label>
+              <input type="date" name="baby_dob" value={formData.baby_dob} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-3 p-2">
+                <input type="checkbox" name="baby_admitted_to_nicu" checked={formData.baby_admitted_to_nicu} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+                <span className="text-sm text-gray-700">Admitted to NICU</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Medical History */}
+        <div className="border-b-2 border-blue-200 pb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-blue-900">Medical History</h2>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="infectious_diseases" checked={formData.infectious_diseases} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Infectious Diseases</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hepatitis_history" checked={formData.hepatitis_history} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Hepatitis History</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hepatitis_b_surface_antigen" checked={formData.hepatitis_b_surface_antigen} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Hepatitis B Surface Antigen</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hepatitis_b_core_antigen" checked={formData.hepatitis_b_core_antigen} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Hepatitis B Core Antigen</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hepatitis_c_antibody" checked={formData.hepatitis_c_antibody} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Hepatitis C Antibody</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hiv_antibody" checked={formData.hiv_antibody} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">HIV Antibody</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="hltv_antibody" checked={formData.hltv_antibody} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">HLTV Antibody</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="syphilis_test" checked={formData.syphilis_test} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Syphilis Test</label>
+            </div>
+          </div>
+
+          {/* Detailed Medical History */}
+          <div className="mt-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="hepatitis_jaundice_liver" checked={formData.hepatitis_jaundice_liver} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">History of hepatitis, jaundice, or liver issues</label>
+                <textarea name="hepatitis_jaundice_liver_details" value={formData.hepatitis_jaundice_liver_details || ''} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Details" />
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Date</label>
+                  <input type="date" name="hepatitis_jaundice_liver_date" value={formData.hepatitis_jaundice_liver_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="history_of_tb" checked={formData.history_of_tb} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">History of TB</label>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Date</label>
+                  <input type="date" name="history_of_tb_date" value={formData.history_of_tb_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="polio_rubella_vaccination_4weeks" checked={formData.polio_rubella_vaccination_4weeks} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">Polio/Rubella vaccination in last 4 weeks</label>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Date</label>
+                  <input type="date" name="polio_rubella_vaccination_date" value={formData.polio_rubella_vaccination_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="human_pituitary_growth_hormone" checked={formData.human_pituitary_growth_hormone} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">Human pituitary growth hormone</label>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Date</label>
+                  <input type="date" name="human_pituitary_growth_hormone_date" value={formData.human_pituitary_growth_hormone_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="serious_illness_last_year" checked={formData.serious_illness_last_year} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">Serious illness in last year</label>
+                <textarea name="serious_illness_last_year_details" value={formData.serious_illness_last_year_details || ''} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Details" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Current Medications</label>
+              <textarea name="current_medications" value={formData.current_medications || ''} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="List any current medications" />
+            </div>
+          </div>
+        </div>
+
+        {/* Lifestyle */}
+        <div className="border-b-2 border-blue-200 pb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-blue-900">Lifestyle</h2>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <input type="checkbox" name="tattoo" checked={formData.tattoo} onChange={handleChange} className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium text-gray-700">Tattoo within last 12 months</label>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Date</label>
+                  <input type="date" name="tattoo_date" value={formData.tattoo_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Unusual Diet</label>
+              <textarea name="unusual_diet" value={formData.unusual_diet || ''} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Describe any unusual diet" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input type="checkbox" name="smoker" checked={formData.smoker} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm text-gray-700">Smoker</label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Alcohol Units Per Day</label>
+              <input type="number" name="alcohol_units_per_day" value={formData.alcohol_units_per_day ?? ''} onChange={handleChange} min="0" className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+          </div>
+        </div>
+
+        {/* Serological Testing */}
+        <div className="border-b-2 border-blue-200 pb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-blue-900">Serological Testing</h2>
+
+          <div className="space-y-6">
+            {/* Initial Blood Test */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-800">Initial Blood Test</h3>
+                <div>
+                  <label className="text-xs text-gray-600 mr-2">Date</label>
+                  <input type="date" name="initial_blood_test_date" value={formData.initial_blood_test_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2 border-b border-gray-200">Test</th>
+                    <th className="text-left px-3 py-2 border-b border-gray-200">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-3 py-2">HIV1</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_hiv1_result" value={formData.initial_hiv1_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HIV2</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_hiv2_result" value={formData.initial_hiv2_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HTLV1</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_htlv1_result" value={formData.initial_htlv1_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HTLV2</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_htlv2_result" value={formData.initial_htlv2_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Hep B</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_hep_b_result" value={formData.initial_hep_b_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Hep C</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_hep_c_result" value={formData.initial_hep_c_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Syphilis</td>
+                    <td className="px-3 py-2"><input type="text" name="initial_syphilis_result" value={formData.initial_syphilis_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Repeat Blood Test */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-800">Repeat Blood Test</h3>
+                <div>
+                  <label className="text-xs text-gray-600 mr-2">Date</label>
+                  <input type="date" name="repeat_blood_test_date" value={formData.repeat_blood_test_date || ''} onChange={handleChange} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+              </div>
+              <table className="w-full text-sm border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2 border-b border-gray-200">Test</th>
+                    <th className="text-left px-3 py-2 border-b border-gray-200">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-3 py-2">HIV1</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_hiv1_result" value={formData.repeat_hiv1_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HIV2</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_hiv2_result" value={formData.repeat_hiv2_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HTLV1</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_htlv1_result" value={formData.repeat_htlv1_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">HTLV2</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_htlv2_result" value={formData.repeat_htlv2_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Hep B</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_hep_b_result" value={formData.repeat_hep_b_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Hep C</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_hep_c_result" value={formData.repeat_hep_c_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">Syphilis</td>
+                    <td className="px-3 py-2"><input type="text" name="repeat_syphilis_result" value={formData.repeat_syphilis_result || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Final Blood Test Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Final Blood Test Status:</label>
+              <select
+                name="final_blood_test_status"
+                value={formData.final_blood_test_status || ''}
+                onChange={handleChange}
+                className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select status...</option>
+                <option value="Not Due">Not Due</option>
+                <option value="Pending">Pending</option>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+                <option value="Inconclusive">Inconclusive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Post-Testing Information */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Post-Testing Information</h3>
+          
+          <div className="space-y-4">
+            {/* One off donation */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="one_off_donation"
+                checked={formData.one_off_donation}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm font-medium text-gray-700">One off donation?</label>
+            </div>
+
+            {/* Appointment for next blood test */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="appointment_for_next_blood_test"
+                  checked={formData.appointment_for_next_blood_test}
+                  onChange={handleChange}
+                  className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label className="text-sm font-medium text-gray-700">Appointment for next blood test</label>
+              </div>
+              {formData.appointment_for_next_blood_test && (
+                <div className="ml-6">
+                  <label className="block text-xs text-gray-600 mb-1">(date and time)</label>
+                  <input
+                    type="datetime-local"
+                    name="appointment_blood_test_datetime"
+                    value={formData.appointment_blood_test_datetime || ''}
+                    onChange={handleChange}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Information leaflets given */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="information_leaflets_given"
+                  checked={formData.information_leaflets_given}
+                  onChange={handleChange}
+                  className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label className="text-sm font-medium text-gray-700">Information leaflets given</label>
+              </div>
+              {formData.information_leaflets_given && (
+                <div className="ml-6 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      name="leaflet_donating_milk"
+                      checked={formData.leaflet_donating_milk}
+                      onChange={handleChange}
+                      className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
+                    />
+                    <label className="text-xs text-gray-600">- Donating milk - your questions answered</label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      name="leaflet_blood_tests"
+                      checked={formData.leaflet_blood_tests}
+                      onChange={handleChange}
+                      className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
+                    />
+                    <label className="text-xs text-gray-600">Blood tests for milk donors</label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      name="leaflet_hygeine"
+                      checked={formData.leaflet_hygeine}
+                      onChange={handleChange}
+                      className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
+                    />
+                    <label className="text-xs text-gray-600">- Hygeine leaflet</label>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Checklist */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Checklist</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="checklist_consent_form"
+                checked={formData.checklist_consent_form}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Consent form</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="checklist_donation_record_complete"
+                checked={formData.checklist_donation_record_complete}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Donation record complete (if milk donated at time of volunteering)</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="checklist_given_bottles_labels"
+                checked={formData.checklist_given_bottles_labels}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Given bottles and labels</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="checklist_collection_explained"
+                checked={formData.checklist_collection_explained}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Collection of milk explained</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="checklist_bloods_taken"
+                checked={formData.checklist_bloods_taken}
+                onChange={handleChange}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Bloods taken and sent off for analysis</label>
+            </div>
+          </div>
+        </div>
+
+        {/* Comments */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Comments</label>
+          <textarea
+            name="comments"
+            value={formData.comments || ''}
+            onChange={handleChange}
+            placeholder="Any additional comments..."
+            rows={4}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Additional Notes */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Medical History Notes</label>
+          <textarea
+            name="medical_history_notes"
+            value={formData.medical_history_notes || ''}
+            onChange={handleChange}
+            placeholder="Any additional medical history information..."
+            rows={4}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
         <button
           type="submit"
           disabled={loading}

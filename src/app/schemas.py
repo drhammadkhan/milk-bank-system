@@ -3,6 +3,28 @@ from typing import Optional, List, Union
 from datetime import datetime
 
 
+def parse_datetime(value: Union[str, datetime, None]) -> Optional[datetime]:
+    """Convert string dates to datetime objects"""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        if not value or value.strip() == '':
+            return None
+        # Handle ISO format dates and datetimes
+        try:
+            # Try parsing as datetime first
+            return datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            try:
+                # Try parsing as date only
+                return datetime.strptime(value[:10], '%Y-%m-%d')
+            except (ValueError, TypeError):
+                return None
+    return None
+
+
 class DonorCreate(BaseModel):
     # Donor Details Section
     hospital_number: Optional[str] = None
@@ -18,6 +40,24 @@ class DonorCreate(BaseModel):
     marital_status: Optional[str] = None
     number_of_children: Optional[int] = 0
     enrolment_date: Optional[Union[str, datetime]] = None
+
+    @field_validator(
+        'date_of_birth',
+        'enrolment_date',
+        'baby_dob',
+        'tattoo_date',
+        'hepatitis_jaundice_liver_date',
+        'history_of_tb_date',
+        'polio_rubella_vaccination_date',
+        'human_pituitary_growth_hormone_date',
+        'initial_blood_test_date',
+        'repeat_blood_test_date',
+        'appointment_blood_test_datetime',
+        mode='before'
+    )
+    @classmethod
+    def validate_dates(cls, v):
+        return parse_datetime(v)
     previous_donor: Optional[bool] = False
     partner_name: Optional[str] = None
     email: Optional[str] = None
@@ -244,3 +284,29 @@ class DispatchScan(BaseModel):
     barcode: str
     user_id: Optional[str]
     scan_type: Optional[str] = "out"
+
+
+class DonationCreate(BaseModel):
+    donor_id: str
+    donation_date: Union[str, datetime]
+    number_of_bottles: int
+    notes: Optional[str] = None
+
+    @field_validator('donation_date', mode='before')
+    @classmethod
+    def validate_donation_date(cls, v):
+        return parse_datetime(v)
+
+
+class DonationRead(BaseModel):
+    id: str
+    donor_id: str
+    donation_date: datetime
+    number_of_bottles: int
+    notes: Optional[str]
+    acknowledged: bool
+    acknowledged_by: Optional[str]
+    acknowledged_at: Optional[datetime]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

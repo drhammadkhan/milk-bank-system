@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.sql import func
 from . import models, schemas
 from sqlalchemy.exc import IntegrityError
@@ -16,6 +16,50 @@ except Exception:
 def _create_audit(db: Session, user_id: str, operation: str, entity_type: str, entity_id: str, before: dict = None, after: dict = None, reason: str = None):
     ev = models.AuditEvent(user_id=user_id, operation=operation, entity_type=entity_type, entity_id=entity_id, before=before, after=after, reason=reason)
     db.add(ev)
+
+
+def create_donation_record(db: Session, donation: schemas.DonationCreate, user_id: str = None):
+    db_donation = models.DonationRecord(
+        donor_id=donation.donor_id,
+        donation_date=donation.donation_date,
+        number_of_bottles=donation.number_of_bottles,
+        notes=donation.notes
+    )
+    db.add(db_donation)
+    db.commit()
+    db.refresh(db_donation)
+    if user_id:
+        _create_audit(db, user_id, "create", "donation_record", db_donation.id, after={"donor_id": donation.donor_id, "number_of_bottles": donation.number_of_bottles})
+        db.commit()
+    return db_donation
+
+
+def get_donation_records_by_donor(db: Session, donor_id: str):
+    return db.query(models.DonationRecord).filter(models.DonationRecord.donor_id == donor_id).order_by(desc(models.DonationRecord.donation_date)).all()
+
+
+def get_all_donation_records(db: Session):
+    return db.query(models.DonationRecord).order_by(desc(models.DonationRecord.donation_date)).all()
+
+
+def get_unacknowledged_donations(db: Session):
+    return db.query(models.DonationRecord).filter(models.DonationRecord.acknowledged == False).order_by(desc(models.DonationRecord.donation_date)).all()
+
+
+def acknowledge_donation(db: Session, donation_id: str, user_id: str = None):
+    donation = db.query(models.DonationRecord).filter(models.DonationRecord.id == donation_id).first()
+    if not donation:
+        return None
+    from datetime import datetime as dt
+    donation.acknowledged = True
+    donation.acknowledged_by = user_id
+    donation.acknowledged_at = dt.now()
+    db.commit()
+    db.refresh(donation)
+    if user_id:
+        _create_audit(db, user_id, "acknowledge", "donation_record", donation_id, after={"acknowledged": True})
+        db.commit()
+    return donation
 
 
 def create_donor(db: Session, donor: schemas.DonorCreate, user_id: str = None):

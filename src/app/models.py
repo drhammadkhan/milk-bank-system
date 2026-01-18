@@ -284,6 +284,19 @@ class DispatchScan(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class DonationRecord(Base):
+    __tablename__ = "donation_records"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    donor_id = Column(String, ForeignKey("donors.id"), nullable=False)
+    donation_date = Column(DateTime(timezone=True), nullable=False)
+    number_of_bottles = Column(Integer, nullable=False)
+    notes = Column(String, nullable=True)
+    acknowledged = Column(Boolean, default=False)
+    acknowledged_by = Column(String, nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id = Column(String, primary_key=True, default=gen_uuid)

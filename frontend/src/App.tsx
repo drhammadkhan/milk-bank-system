@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { DonorList } from './pages/Donors';
 import { NewDonor } from './pages/NewDonor';
 import { EditDonor } from './pages/EditDonor';
+import { ViewDonor } from './pages/ViewDonor';
 import { BatchList } from './pages/Batches';
 import { BatchDetail } from './pages/BatchDetail';
 import { DispatchList } from './pages/Dispatch';
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/donors" element={<DonorList />} />
           <Route path="/donors/new" element={<NewDonor />} />
+          <Route path="/donors/:donorId" element={<ViewDonor />} />
           <Route path="/donors/:donorId/edit" element={<EditDonor />} />
           <Route path="/batches" element={<BatchList />} />
           <Route path="/batches/:id" element={<BatchDetail />} />
