@@ -19,7 +19,28 @@ def _create_audit(db: Session, user_id: str, operation: str, entity_type: str, e
 
 
 def create_donation_record(db: Session, donation: schemas.DonationCreate, user_id: str = None):
+    # Get donor's hospital number
+    donor = db.query(models.Donor).filter(models.Donor.id == donation.donor_id).first()
+    hospital_num = (donor.hospital_number or 'UNKNOWN') if donor else 'UNKNOWN'
+    
+    # Format date as YYYYMMDD
+    date_str = donation.donation_date.strftime('%Y%m%d')
+    
+    # Get sequential number for this hospital number and date
+    date_start = donation.donation_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    date_end = donation.donation_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    existing_count = db.query(models.DonationRecord).filter(
+        models.DonationRecord.donation_date >= date_start,
+        models.DonationRecord.donation_date <= date_end,
+        models.DonationRecord.donation_id.like(f"{hospital_num}-{date_str}-%")
+    ).count()
+    
+    seq_num = existing_count + 1
+    generated_donation_id = f"{hospital_num}-{date_str}-{seq_num:03d}"
+    
     db_donation = models.DonationRecord(
+        donation_id=generated_donation_id,
         donor_id=donation.donor_id,
         donation_date=donation.donation_date,
         number_of_bottles=donation.number_of_bottles,
@@ -29,7 +50,7 @@ def create_donation_record(db: Session, donation: schemas.DonationCreate, user_i
     db.commit()
     db.refresh(db_donation)
     if user_id:
-        _create_audit(db, user_id, "create", "donation_record", db_donation.id, after={"donor_id": donation.donor_id, "number_of_bottles": donation.number_of_bottles})
+        _create_audit(db, user_id, "create", "donation_record", db_donation.id, after={"donor_id": donation.donor_id, "number_of_bottles": donation.number_of_bottles, "donation_id": generated_donation_id})
         db.commit()
     return db_donation
 
@@ -279,7 +300,55 @@ def get_all_batches(db: Session):
 
 
 def get_batch(db: Session, batch_id: str):
-    return db.query(models.Batch).filter(models.Batch.id == batch_id).first()
+    batch = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
+    if not batch:
+        return None
+    
+    donor_info = None
+    
+    # If the batch has donation IDs stored, use the first one to get donor info
+    if batch.donation_ids and len(batch.donation_ids) > 0:
+        first_donation_id = batch.donation_ids[0]
+        
+        # Get the donation record
+        donation_record = db.query(models.DonationRecord).filter(
+            models.DonationRecord.donation_id == first_donation_id
+        ).first()
+        
+        if donation_record:
+            # Get the donor
+            donor = db.query(models.Donor).filter(
+                models.Donor.id == donation_record.donor_id
+            ).first()
+            
+            if donor:
+                donor_name = f"{donor.first_name or ''} {donor.last_name or ''}".strip()
+                donor_info = {
+                    "donor_hospital_number": donor.hospital_number,
+                    "donor_name": donor_name if donor_name else None
+                }
+
+    # Convert batch to dict
+    batch_dict = {
+        "id": batch.id,
+        "batch_code": batch.batch_code,
+        "batch_date": batch.batch_date,
+        "hospital_number": batch.hospital_number,
+        "created_at": batch.created_at,
+        "status": batch.status.name,
+        "total_volume_ml": batch.total_volume_ml,
+        "number_of_bottles": batch.number_of_bottles
+    }
+    
+    # Add stored donation IDs
+    if batch.donation_ids:
+        batch_dict["donation_ids"] = batch.donation_ids
+    
+    # Add donor information if found
+    if donor_info:
+        batch_dict.update(donor_info)
+    
+    return batch_dict
 
 
 def get_all_bottles(db: Session):
@@ -306,6 +375,20 @@ def approve_donor(db: Session, donor_id: str, approver_id: str):
     d.status = models.DonorStatus.Approved
     db.add(d)
     _create_audit(db, approver_id, "approve", "donor", d.id, before=before, after={"status": d.status.name})
+    db.commit()
+    db.refresh(d)
+    return d
+
+
+def revert_donor_approval(db: Session, donor_id: str, user_id: str = None):
+    d = get_donor(db, donor_id)
+    if not d:
+        return None
+    before = {"status": d.status.name}
+    d.status = models.DonorStatus.Applied
+    db.add(d)
+    if user_id:
+        _create_audit(db, user_id, "revert_approval", "donor", d.id, before=before, after={"status": d.status.name})
     db.commit()
     db.refresh(d)
     return d
@@ -347,16 +430,63 @@ def accept_donation(db: Session, donation_id: str, user_id: str = None):
     return d
 
 
-def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, user_id: str = None):
-    # enforce that donations are Accepted and not already assigned
-    donations = db.query(models.Donation).filter(models.Donation.id.in_(donation_ids)).all()
-    if len(donations) != len(donation_ids):
-        raise IntegrityError("Some donations not found", params={}, orig=None)
-    for d in donations:
-        if d.status != models.DonationStatus.Accepted:
-            raise IntegrityError(f"Donation {d.id} not in Accepted state", params={}, orig=None)
+def _resolve_donations_for_batch(db: Session, donation_ids: list):
+    resolved = []
+    missing = []
 
-    batch = models.Batch(batch_code=batch_code, total_volume_ml=sum(d.volume_ml for d in donations))
+    for identifier in donation_ids:
+        d = db.query(models.Donation).filter(models.Donation.id == identifier).first()
+        if not d:
+            d = db.query(models.Donation).filter(models.Donation.barcode == identifier).first()
+
+        if not d:
+            rec = db.query(models.DonationRecord).filter(
+                (models.DonationRecord.donation_id == identifier) | (models.DonationRecord.id == identifier)
+            ).first()
+            if rec:
+                barcode = rec.donation_id or rec.id
+                d = db.query(models.Donation).filter(models.Donation.barcode == barcode).first()
+                if not d:
+                    d = models.Donation(
+                        barcode=barcode,
+                        donor_id=rec.donor_id,
+                        collected_at=rec.donation_date,
+                        volume_ml=0.0,
+                        status=models.DonationStatus.Accepted
+                    )
+                    db.add(d)
+                    # Commit here to ensure the record is persisted before status check
+                    db.commit()
+                    db.refresh(d)
+            else:
+                missing.append(identifier)
+
+        if d:
+            resolved.append(d)
+
+    if missing:
+        raise IntegrityError(f"Some donations not found: {', '.join(missing)}", params={}, orig=None)
+
+    return resolved
+
+
+def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, user_id: str = None, 
+                              batch_date = None, hospital_number: str = None, number_of_bottles: int = None):
+    # accept Donation IDs, Donation barcodes, or DonationRecord donation_id values
+    donations = _resolve_donations_for_batch(db, donation_ids)
+    for d in donations:
+        # Only allow donations that are in Accepted state (or newly created ones)
+        if d.status != models.DonationStatus.Accepted:
+            raise IntegrityError(f"Donation {d.barcode} is already used in another batch (status: {d.status.name})", params={}, orig=None)
+
+    batch = models.Batch(
+        batch_code=batch_code, 
+        total_volume_ml=sum(d.volume_ml for d in donations),
+        batch_date=batch_date,
+        hospital_number=hospital_number,
+        number_of_bottles=number_of_bottles,
+        donation_ids=donation_ids  # Store the original donation IDs
+    )
     db.add(batch)
     db.commit()
     db.refresh(batch)

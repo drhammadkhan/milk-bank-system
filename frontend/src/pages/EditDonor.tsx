@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { donors } from '../api';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
 
 export const EditDonor: React.FC = () => {
   const { donorId } = useParams<{ donorId: string }>();
+  const [donorStatus, setDonorStatus] = useState<string>('');
+  const [reverting, setReverting] = useState(false);
   const [formData, setFormData] = useState({
     hospital_number: '',
     first_name: '',
@@ -108,6 +110,7 @@ export const EditDonor: React.FC = () => {
       if (!donorId) return;
       const response = await donors.get(donorId);
       const donorData = response.data;
+      setDonorStatus(donorData.status || '');
       setFormData({
         hospital_number: donorData.hospital_number || '',
         first_name: donorData.first_name || '',
@@ -244,6 +247,25 @@ export const EditDonor: React.FC = () => {
     }
   };
 
+  const handleRevertApproval = async () => {
+    if (!window.confirm('Are you sure you want to revert this donor back to Applied status?')) {
+      return;
+    }
+    
+    try {
+      setReverting(true);
+      setError('');
+      await donors.revertApproval(donorId!);
+      setDonorStatus('Applied');
+      alert('Donor status reverted to Applied successfully');
+      await loadDonor(); // Reload to ensure we have the latest data
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to revert approval');
+    } finally {
+      setReverting(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="max-w-4xl mx-auto mt-6">
@@ -277,10 +299,37 @@ export const EditDonor: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-8 space-y-8">
-        {/* Donor ID Display */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-xs text-blue-600 mb-1">Unique Donor ID</p>
-          <p className="text-2xl font-mono font-bold text-blue-700">{donorId}</p>
+        {/* Donor ID and Status Display */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-xs text-blue-600 mb-1">Unique Donor ID</p>
+            <p className="text-2xl font-mono font-bold text-blue-700">{donorId}</p>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-xs text-gray-600 mb-2">Current Status</p>
+            <div className="flex items-center justify-between">
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                donorStatus === 'Approved' 
+                  ? 'bg-green-100 text-green-800' 
+                  : donorStatus === 'Active'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {donorStatus}
+              </span>
+              {donorStatus === 'Approved' && (
+                <button
+                  type="button"
+                  onClick={handleRevertApproval}
+                  disabled={reverting}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 disabled:opacity-50 border border-orange-300"
+                >
+                  <RotateCcw size={16} />
+                  {reverting ? 'Reverting...' : 'Revert to Applied'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* [Include all the form sections from NewDonor.tsx] */}

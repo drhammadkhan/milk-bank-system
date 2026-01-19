@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { batches } from '../api';
+import { batches, donations } from '../api';
 import { Plus, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +8,9 @@ interface Batch {
   batch_code: string;
   status: string;
   created_at: string;
+  batch_date?: string;
+  hospital_number?: string;
+  number_of_bottles?: number;
   donation_count?: number;
 }
 
@@ -15,9 +18,11 @@ export const BatchList: React.FC = () => {
   const [batchList, setBatchList] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [recentDonations, setRecentDonations] = useState<Array<{ id: string; donation_id?: string; donation_date?: string }>>([]);
 
   useEffect(() => {
     loadBatches();
+    loadRecentDonations();
   }, []);
 
   const loadBatches = async () => {
@@ -29,6 +34,22 @@ export const BatchList: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to load batches');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRecentDonations = async () => {
+    try {
+      const res = await donations.list();
+      const items: any[] = res.data || [];
+      // Take last 10 by donation_date desc if available
+      const sorted = items
+        .slice()
+        .sort((a, b) => new Date(b.donation_date).getTime() - new Date(a.donation_date).getTime())
+        .slice(0, 10)
+        .map(d => ({ id: d.id, donation_id: d.donation_id, donation_date: d.donation_date }));
+      setRecentDonations(sorted);
+    } catch (e) {
+      // Non-blocking; ignore errors here
     }
   };
 
@@ -51,6 +72,23 @@ export const BatchList: React.FC = () => {
 
   return (
     <div>
+      {recentDonations.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h2 className="text-sm font-semibold text-blue-900 mb-2">Recent Donation IDs</h2>
+          <div className="flex flex-wrap gap-2">
+            {recentDonations.map((d) => (
+              <Link
+                key={d.id}
+                to={`/batches/new?donation_ids=${encodeURIComponent(d.donation_id ?? '')}`}
+                className="px-2 py-1 bg-white border border-blue-200 rounded-md text-blue-700 hover:bg-blue-100 font-mono text-xs"
+                title={d.donation_date ? new Date(d.donation_date).toLocaleDateString() : ''}
+              >
+                {d.donation_id || d.id}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Batches</h1>
         <Link
@@ -79,6 +117,9 @@ export const BatchList: React.FC = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Code</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Batch Date</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Hospital #</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Bottles</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Created</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
@@ -91,6 +132,15 @@ export const BatchList: React.FC = () => {
                     <Link to={`/batches/${batch.id}`} className="text-blue-600 hover:underline">
                       {batch.batch_code}
                     </Link>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {batch.batch_date ? new Date(batch.batch_date).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {batch.hospital_number || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {batch.number_of_bottles ?? '-'}
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(batch.status)}`}>

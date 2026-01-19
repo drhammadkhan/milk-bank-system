@@ -15,6 +15,7 @@ export const donors = {
   update: (id: string, data: any) => API.put(`/donors/${id}`, data),
   approve: (id: string, data: { approver_id: string }) =>
     API.post(`/donors/${id}/approve`, data),
+  revertApproval: (id: string) => API.post(`/donors/${id}/revert-approval`, {}),
   getDonations: (id: string) => API.get(`/donors/${id}/donations`),
 };
 
@@ -27,6 +28,7 @@ export const donations = {
     notes?: string;
   }) => API.post('/donations', data),
   list: () => API.get('/donations'),
+  getById: (donationId: string) => API.get(`/donations/by-id/${donationId}`),
   listUnacknowledged: () => API.get('/donations/unacknowledged'),
   get: (id: string) => API.get(`/donations/${id}`),
   acknowledge: (id: string) => API.post(`/donations/${id}/acknowledge`, {}),
@@ -41,6 +43,8 @@ export const batches = {
   }) => API.post('/batches', data),
   list: () => API.get('/batches'),
   get: (id: string) => API.get(`/batches/${id}`),
+  getLabelsZpl: (id: string) => API.get(`/batches/${id}/labels/zpl`, { responseType: 'text' }),
+  print: (id: string) => API.post(`/batches/${id}/print`),
   startPasteurisation: (
     id: string,
     data: { operator_id: string; device_id: string }
@@ -117,6 +121,14 @@ export const dispatches = {
   getManifest: (id: string) => API.get(`/dispatches/${id}/manifest/json`),
   exportCSV: (id: string) => API.get(`/dispatches/${id}/manifest/csv`),
   exportPDF: (id: string) => API.get(`/dispatches/${id}/manifest/pdf`, { responseType: 'blob' }),
+};
+
+export const printers = {
+  discover: () => API.get('/printers/discover'),
+  configure: (data: { name: string; connection_type: string; address: string; port?: number; timeout?: number }) => 
+    API.post('/printers/configure', data),
+  getCurrent: () => API.get('/printers/current'),
+  test: () => API.post('/printers/test'),
 };
 
 export default API;

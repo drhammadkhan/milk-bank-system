@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, PlainTextResponse
 from fastapi.templating import Jinja2Templates
+from io import BytesIO
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from . import crud, schemas
+from . import crud, schemas, models
 from .database import SessionLocal, engine, Base
+from .labels import generate_batch_labels_zpl
+from .printer import printer_manager, PrinterConfig, PrinterInfo
 
 templates = Jinja2Templates(directory="src/app/templates")
 
@@ -77,6 +80,16 @@ def list_donations(db: Session = Depends(get_db)):
     return crud.get_all_donation_records(db)
 
 
+@router.get("/donations/by-id/{donation_id}", response_model=schemas.DonationRead)
+def get_donation_by_id(donation_id: str, db: Session = Depends(get_db)):
+    donation = db.query(models.DonationRecord).filter(
+        models.DonationRecord.donation_id == donation_id
+    ).first()
+    if not donation:
+        raise HTTPException(status_code=404, detail="Donation not found")
+    return donation
+
+
 @router.get("/donations/unacknowledged", response_model=list[schemas.DonationRead])
 def get_unacknowledged_donations(db: Session = Depends(get_db)):
     return crud.get_unacknowledged_donations(db)
@@ -114,6 +127,14 @@ def approve_donor(donor_id: str, db: Session = Depends(get_db), approver_id: str
     return d
 
 
+@router.post("/donors/{donor_id}/revert-approval", response_model=schemas.DonorRead)
+def revert_donor_approval(donor_id: str, db: Session = Depends(get_db)):
+    d = crud.revert_donor_approval(db, donor_id, user_id="system")
+    if not d:
+        raise HTTPException(status_code=404, detail="Donor not found")
+    return d
+
+
 @router.post("/donations", response_model=schemas.DonationRead)
 def create_donation(donation: schemas.DonationCreate, db: Session = Depends(get_db)):
     try:
@@ -139,10 +160,18 @@ def get_donation(donation_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/batches")
-def create_batch(payload: dict, db: Session = Depends(get_db)):
-    # payload: {"donation_ids": [..], "batch_code": ".."}
+def create_batch(batch_create: schemas.BatchCreate, db: Session = Depends(get_db)):
+    # Use the schema to ensure proper validation and datetime parsing
     try:
-        batch = crud.assign_donations_to_batch(db, payload.get("donation_ids"), payload.get("batch_code"), user_id=payload.get("user_id"))
+        batch = crud.assign_donations_to_batch(
+            db, 
+            batch_create.donation_ids, 
+            batch_create.batch_code, 
+            user_id=None,  # TODO: get from authentication
+            batch_date=batch_create.batch_date,
+            hospital_number=batch_create.hospital_number,
+            number_of_bottles=batch_create.number_of_bottles
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"id": batch.id, "batch_code": batch.batch_code}
@@ -159,6 +188,25 @@ def get_batch(batch_id: str, db: Session = Depends(get_db)):
     if not b:
         raise HTTPException(status_code=404, detail="Batch not found")
     return b
+
+
+@router.get("/batches/{batch_id}/labels/zpl")
+def get_batch_labels_zpl(batch_id: str, db: Session = Depends(get_db)):
+    """Generate ZPL format labels for all bottles in a batch (Zebra ZD410) and return as downloadable file"""
+    batch = crud.get_batch(db, batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    # Generate ZPL for the batch with number of bottles
+    number_of_bottles = batch.number_of_bottles or 1
+    zpl_content = generate_batch_labels_zpl(batch.batch_code, number_of_bottles)
+    
+    # Return as downloadable file with appropriate headers
+    return Response(
+        content=zpl_content,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename={batch.batch_code}_labels.zpl"}
+    )
 
 
 @router.post("/donations/{donation_id}/accept")
@@ -342,3 +390,77 @@ def ui_dispatch_manifest(request: Request, dispatch_id: str, db: Session = Depen
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return templates.TemplateResponse("manifest.html", {"request": request, "manifest": manifest})
+
+
+# Printer Management Endpoints
+
+@router.get("/printers/discover")
+def discover_printers():
+    """Discover available Zebra printers on the network"""
+    network_printers = printer_manager.discover_printers()
+    system_printers = printer_manager.get_system_printers()
+    
+    return {
+        "network_printers": network_printers,
+        "system_printers": system_printers
+    }
+
+
+@router.post("/printers/configure")
+def configure_printer(printer_config: PrinterConfig):
+    """Configure the active printer"""
+    printer_manager.set_printer(printer_config)
+    return {"message": f"Printer {printer_config.name} configured successfully"}
+
+
+@router.get("/printers/current")
+def get_current_printer():
+    """Get the current printer configuration"""
+    current = printer_manager.get_printer()
+    if not current:
+        return {"printer": None}
+    return {"printer": current}
+
+
+@router.post("/batches/{batch_id}/print")
+def print_batch_labels(batch_id: str, db: Session = Depends(get_db)):
+    """Print labels directly to the configured printer"""
+    batch = crud.get_batch(db, batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    # Generate ZPL content
+    number_of_bottles = batch.number_of_bottles or 1
+    zpl_content = generate_batch_labels_zpl(batch.batch_code, number_of_bottles)
+    
+    # Send to printer
+    result = printer_manager.send_zpl(zpl_content)
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail=result['message'])
+    
+    return {"message": result['message'], "labels_printed": number_of_bottles}
+
+
+@router.post("/printers/test")
+def test_printer():
+    """Send a test label to the configured printer"""
+    test_zpl = """^XA
+^DF
+^PW400
+^PH200
+^FO10,10
+^A0N,20,20
+^FDTEST PRINT^FS
+^FO10,40
+^BY2,2.0,50
+^BCN,50,Y,N,N
+^FDTEST123^FS
+^XZ"""
+    
+    result = printer_manager.send_zpl(test_zpl)
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail=result['message'])
+    
+    return {"message": result['message']}

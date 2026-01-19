@@ -196,6 +196,9 @@ export const Dashboard: React.FC = () => {
                     >
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">
+                          {donation.donation_id && (
+                            <span className="text-blue-600 font-mono text-sm mr-2">{donation.donation_id}</span>
+                          )}
                           {donation.number_of_bottles} bottle{donation.number_of_bottles !== 1 ? 's' : ''} donated
                         </p>
                         <p className="text-sm text-gray-600">

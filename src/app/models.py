@@ -177,6 +177,10 @@ class Batch(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(Enum(BatchStatus), nullable=False, default=BatchStatus.Created)
     total_volume_ml = Column(Float, default=0.0)
+    batch_date = Column(DateTime(timezone=True), nullable=True)
+    hospital_number = Column(String, nullable=True)
+    number_of_bottles = Column(Integer, nullable=True)
+    donation_ids = Column(JSON, nullable=True)  # Store donation IDs as JSON array
 
 
 class Bottle(Base):
@@ -287,6 +291,7 @@ class DispatchScan(Base):
 class DonationRecord(Base):
     __tablename__ = "donation_records"
     id = Column(String, primary_key=True, default=gen_uuid)
+    donation_id = Column(String, unique=True, index=True, nullable=True)  # Auto-generated: HospitalNum-Date-Seq
     donor_id = Column(String, ForeignKey("donors.id"), nullable=False)
     donation_date = Column(DateTime(timezone=True), nullable=False)
     number_of_bottles = Column(Integer, nullable=False)

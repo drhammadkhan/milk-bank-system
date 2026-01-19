@@ -350,6 +350,7 @@ export const ViewDonor: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-y border-gray-200">
                   <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Donation ID</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Date</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Bottles</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Notes</th>
@@ -359,6 +360,7 @@ export const ViewDonor: React.FC = () => {
                 <tbody className="divide-y divide-gray-200">
                   {donorDonations.map((donation: any) => (
                     <tr key={donation.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-blue-600 font-mono text-xs font-semibold">{donation.donation_id || '-'}</td>
                       <td className="px-4 py-3 text-gray-900 font-medium">{formatDate(donation.donation_date)}</td>
                       <td className="px-4 py-3 text-gray-900">{donation.number_of_bottles}</td>
                       <td className="px-4 py-3 text-gray-600">{donation.notes || '-'}</td>

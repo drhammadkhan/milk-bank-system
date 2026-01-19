@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import evelinaLogo from '../assets/evelina-logo.png';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -74,11 +75,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Footer */}
         <div className="p-4 border-t border-gray-800 space-y-2">
           <Link
-            to="/settings"
-            className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition"
+            to="/settings/printers"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+              isActive('/settings/printers')
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
           >
             <Settings size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Settings</span>}
+            {sidebarOpen && <span className="text-sm font-medium">Printer Settings</span>}
           </Link>
           <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition">
             <LogOut size={20} />
@@ -92,7 +97,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Top Bar */}
         <div className="bg-white shadow">
           <div className="px-8 py-4 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Milk Bank Workflow System</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold text-gray-900">Evelina Nicu Milk Bank Tracking System</h2>
+              <img src={evelinaLogo} alt="Evelina London" className="h-12" />
+            </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">User: Admin</span>
             </div>

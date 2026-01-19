@@ -300,6 +300,7 @@ class DonationCreate(BaseModel):
 
 class DonationRead(BaseModel):
     id: str
+    donation_id: Optional[str]
     donor_id: str
     donation_date: datetime
     number_of_bottles: int
@@ -310,3 +311,16 @@ class DonationRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class BatchCreate(BaseModel):
+    batch_code: str
+    donation_ids: List[str]
+    batch_date: Optional[Union[str, datetime]] = None
+    hospital_number: Optional[str] = None
+    number_of_bottles: Optional[int] = None
+    
+    @field_validator('batch_date', mode='before')
+    @classmethod
+    def parse_batch_date(cls, value):
+        return parse_datetime(value)

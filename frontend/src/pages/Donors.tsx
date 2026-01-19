@@ -22,6 +22,7 @@ export const DonorList: React.FC = () => {
   const [error, setError] = useState('');
   const [searchName, setSearchName] = useState('');
   const [searchHospital, setSearchHospital] = useState('');
+  const [approving, setApproving] = useState<string | null>(null);
 
   useEffect(() => {
     loadDonors();
@@ -36,6 +37,19 @@ export const DonorList: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to load donors');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveDonor = async (donorId: string) => {
+    try {
+      setApproving(donorId);
+      await donors.approve(donorId, { approver_id: 'system' });
+      // Reload the donor list to reflect the status change
+      await loadDonors();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to approve donor');
+    } finally {
+      setApproving(null);
     }
   };
 
@@ -142,25 +156,25 @@ export const DonorList: React.FC = () => {
             </thead>
             <tbody>
               {filteredDonors.map((donor, idx) => (
-                <tr key={idx} className="border-b hover:bg-gray-50">
+                <tr key={idx} className={`border-b hover:bg-gray-50 ${donor.status === 'Approved' ? 'bg-green-50' : ''}`}>
                   <td className="px-6 py-4 text-sm">
                     <Link
                       to={`/donors/${donor.id}`}
-                      className="text-blue-600 hover:text-blue-800 font-mono text-xs"
+                      className={`${donor.status === 'Approved' ? 'text-green-700 hover:text-green-900' : 'text-blue-600 hover:text-blue-800'} font-mono text-xs font-semibold`}
                       title="Click to view/edit donor"
                     >
                       {donor.id}
                     </Link>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className={`px-6 py-4 text-sm ${donor.status === 'Approved' ? 'text-green-900 font-semibold' : 'text-gray-700'}`}>
                     {donor.first_name && donor.last_name
                       ? `${donor.first_name} ${donor.last_name}`
                       : '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className={`px-6 py-4 text-sm ${donor.status === 'Approved' ? 'text-green-800' : 'text-gray-600'}`}>
                     {donor.hospital_number || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className={`px-6 py-4 text-sm ${donor.status === 'Approved' ? 'text-green-800' : 'text-gray-600'}`}>
                     {donor.phone_number || donor.email || '-'}
                   </td>
                   <td className="px-6 py-4 text-sm">
@@ -168,7 +182,7 @@ export const DonorList: React.FC = () => {
                       {donor.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className={`px-6 py-4 text-sm ${donor.status === 'Approved' ? 'text-green-800' : 'text-gray-600'}`}>
                     {new Date(donor.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-sm">
@@ -180,12 +194,13 @@ export const DonorList: React.FC = () => {
                         Edit
                       </Link>
                       {donor.status !== 'Approved' && (
-                        <Link
-                          to={`/donors/${donor.id}/approve`}
-                          className="text-green-600 hover:text-green-800 font-medium"
+                        <button
+                          onClick={() => handleApproveDonor(donor.id)}
+                          disabled={approving === donor.id}
+                          className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
                         >
-                          Approve
-                        </Link>
+                          {approving === donor.id ? 'Approving...' : 'Approve'}
+                        </button>
                       )}
                       {donor.status === 'Approved' && (
                         <CheckCircle size={20} className="text-green-600" />
