@@ -230,23 +230,6 @@ class DonorRead(BaseModel):
         from_attributes = True
 
 
-class DonationCreate(BaseModel):
-    barcode: str
-    donor_id: str
-    volume_ml: float
-
-
-class DonationRead(BaseModel):
-    id: str
-    barcode: str
-    donor_id: str
-    volume_ml: float
-    status: str
-
-    class Config:
-        from_attributes = True
-
-
 class HospitalCreate(BaseModel):
     name: str
     fhir_endpoint: Optional[str] = None
@@ -304,6 +287,8 @@ class DonationRead(BaseModel):
     donor_id: str
     donation_date: datetime
     number_of_bottles: int
+    volume_ml: float
+    status: str
     notes: Optional[str]
     acknowledged: bool
     acknowledged_by: Optional[str]

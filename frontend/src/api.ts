@@ -43,20 +43,35 @@ export const batches = {
   }) => API.post('/batches', data),
   list: () => API.get('/batches'),
   get: (id: string) => API.get(`/batches/${id}`),
+  getNextCode: (baseCode: string) => API.get(`/batches/next-code/${baseCode}`),
   getLabelsZpl: (id: string) => API.get(`/batches/${id}/labels/zpl`, { responseType: 'text' }),
   print: (id: string) => API.post(`/batches/${id}/print`),
   startPasteurisation: (
     id: string,
     data: { operator_id: string; device_id: string }
-  ) => API.post(`/batches/${id}/pasteurise/start`, data),
+  ) => API.post(`/batches/${id}/pasteurise/start?operator_id=${data.operator_id}&device_id=${data.device_id}`),
   completePasteurisation: (
     id: string,
-    data: { operator_id: string; result_notes?: string }
+    data: { operator_id: string; record_id: string; result_notes?: string }
   ) => API.post(`/batches/${id}/pasteurise/complete`, data),
   release: (
     id: string,
     data: { approver_id: string; approver2_id: string; notes?: string }
   ) => API.post(`/batches/${id}/release`, data),
+  createSample: (batchId: string, data: { sample_code: string }) =>
+    API.post(`/batches/${batchId}/samples`, data),
+  postSampleResult: (
+    sampleId: string,
+    data: {
+      test_type: string;
+      organism?: string;
+      threshold_flag: boolean;
+      notes?: string;
+      posted_by: string;
+    }
+  ) => API.post(`/samples/${sampleId}/results`, data),
+  processPostPasteurisation: (id: string) => 
+    API.post(`/batches/${id}/process-post-pasteurisation`),
 };
 
 // Sample/Microbiology endpoints

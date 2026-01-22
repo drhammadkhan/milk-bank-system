@@ -4,6 +4,7 @@ import { donors } from '../api';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export const NewDonor: React.FC = () => {
+  const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
   const [formData, setFormData] = useState({
     hospital_number: '',
     first_name: '',
@@ -17,7 +18,7 @@ export const NewDonor: React.FC = () => {
     gp_address: '',
     marital_status: '',
     number_of_children: 0,
-    enrolment_date: '',
+    enrolment_date: today,
     previous_donor: false,
     partner_name: '',
     email: '',

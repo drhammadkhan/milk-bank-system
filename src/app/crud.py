@@ -368,11 +368,16 @@ def get_dispatch(db: Session, dispatch_id: str):
 
 
 def approve_donor(db: Session, donor_id: str, approver_id: str):
+    from .state_machines import transition_donor_state
+    from transitions.core import MachineError
     d = get_donor(db, donor_id)
     if not d:
         return None
     before = {"status": d.status.name}
-    d.status = models.DonorStatus.Approved
+    try:
+        transition_donor_state(d, 'approve')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     db.add(d)
     _create_audit(db, approver_id, "approve", "donor", d.id, before=before, after={"status": d.status.name})
     db.commit()
@@ -381,11 +386,16 @@ def approve_donor(db: Session, donor_id: str, approver_id: str):
 
 
 def revert_donor_approval(db: Session, donor_id: str, user_id: str = None):
+    from .state_machines import transition_donor_state
+    from transitions.core import MachineError
     d = get_donor(db, donor_id)
     if not d:
         return None
     before = {"status": d.status.name}
-    d.status = models.DonorStatus.Applied
+    try:
+        transition_donor_state(d, 'revert_to_applied')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     db.add(d)
     if user_id:
         _create_audit(db, user_id, "revert_approval", "donor", d.id, before=before, after={"status": d.status.name})
@@ -413,16 +423,19 @@ def get_donation(db: Session, donation_id: str):
 
 
 def accept_donation(db: Session, donation_id: str, user_id: str = None):
+    from .state_machines import transition_donation_state
+    from transitions.core import MachineError
     d = db.query(models.Donation).filter(models.Donation.id == donation_id).first()
     if not d:
         return None
     donor = db.query(models.Donor).filter(models.Donor.id == d.donor_id).first()
     if not donor or donor.status != models.DonorStatus.Approved:
         raise IntegrityError("Donor not approved", params={}, orig=None)
-    if d.status != models.DonationStatus.Collected and d.status != models.DonationStatus.IntakeQuarantine:
-        raise IntegrityError("Donation not in a state to accept", params={}, orig=None)
     before = {"status": d.status.name}
-    d.status = models.DonationStatus.Accepted
+    try:
+        transition_donation_state(d, 'accept')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     db.add(d)
     _create_audit(db, user_id, "accept", "donation", d.id, before=before, after={"status": d.status.name})
     db.commit()
@@ -431,38 +444,20 @@ def accept_donation(db: Session, donation_id: str, user_id: str = None):
 
 
 def _resolve_donations_for_batch(db: Session, donation_ids: list):
+    """Resolve donation identifiers to DonationRecord objects"""
     resolved = []
     missing = []
 
     for identifier in donation_ids:
-        d = db.query(models.Donation).filter(models.Donation.id == identifier).first()
-        if not d:
-            d = db.query(models.Donation).filter(models.Donation.barcode == identifier).first()
-
-        if not d:
-            rec = db.query(models.DonationRecord).filter(
-                (models.DonationRecord.donation_id == identifier) | (models.DonationRecord.id == identifier)
-            ).first()
-            if rec:
-                barcode = rec.donation_id or rec.id
-                d = db.query(models.Donation).filter(models.Donation.barcode == barcode).first()
-                if not d:
-                    d = models.Donation(
-                        barcode=barcode,
-                        donor_id=rec.donor_id,
-                        collected_at=rec.donation_date,
-                        volume_ml=0.0,
-                        status=models.DonationStatus.Accepted
-                    )
-                    db.add(d)
-                    # Commit here to ensure the record is persisted before status check
-                    db.commit()
-                    db.refresh(d)
-            else:
-                missing.append(identifier)
-
+        # Look up by either id or donation_id field
+        d = db.query(models.DonationRecord).filter(
+            (models.DonationRecord.id == identifier) | (models.DonationRecord.donation_id == identifier)
+        ).first()
+        
         if d:
             resolved.append(d)
+        else:
+            missing.append(identifier)
 
     if missing:
         raise IntegrityError(f"Some donations not found: {', '.join(missing)}", params={}, orig=None)
@@ -472,12 +467,40 @@ def _resolve_donations_for_batch(db: Session, donation_ids: list):
 
 def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, user_id: str = None, 
                               batch_date = None, hospital_number: str = None, number_of_bottles: int = None):
-    # accept Donation IDs, Donation barcodes, or DonationRecord donation_id values
+    # Resolve donation IDs to DonationRecord objects
     donations = _resolve_donations_for_batch(db, donation_ids)
     for d in donations:
-        # Only allow donations that are in Accepted state (or newly created ones)
+        # Only allow donations that are in Accepted state
         if d.status != models.DonationStatus.Accepted:
-            raise IntegrityError(f"Donation {d.barcode} is already used in another batch (status: {d.status.name})", params={}, orig=None)
+            identifier = d.donation_id or d.id
+            raise IntegrityError(f"Donation {identifier} is already used in another batch (status: {d.status.name})", params={}, orig=None)
+
+    # Check if batch code already exists and find next available sequence number
+    import re
+    existing_batch = db.query(models.Batch).filter(models.Batch.batch_code == batch_code).first()
+    if existing_batch:
+        # Find all batches with same base code (including sequenced variants)
+        all_batches = db.query(models.Batch.batch_code).filter(
+            models.Batch.batch_code.like(f"{batch_code}%")
+        ).all()
+        
+        # Extract sequence numbers from batch codes
+        max_sequence = 0
+        for (code,) in all_batches:
+            if code == batch_code:
+                max_sequence = max(max_sequence, 0)  # Base code exists
+            else:
+                # Try to extract sequence number (format: BATCH-CODE-###)
+                match = re.match(rf"{re.escape(batch_code)}-(\d+)", code)
+                if match:
+                    seq_num = int(match.group(1))
+                    max_sequence = max(max_sequence, seq_num)
+        
+        # Generate next sequence number
+        next_sequence = max_sequence + 1
+        if next_sequence > 999:  # Safety limit
+            raise IntegrityError(f"Cannot generate unique batch code for {batch_code}", params={}, orig=None)
+        batch_code = f"{batch_code}-{next_sequence:03d}"
 
     batch = models.Batch(
         batch_code=batch_code, 
@@ -491,9 +514,14 @@ def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, 
     db.commit()
     db.refresh(batch)
 
+    from .state_machines import transition_donation_state
+    from transitions.core import MachineError
     for d in donations:
         before = {"status": d.status.name}
-        d.status = models.DonationStatus.AssignedToBatch
+        try:
+            transition_donation_state(d, 'assign')
+        except MachineError as e:
+            raise IntegrityError(f"Cannot assign donation {d.barcode}: {str(e)}", params={}, orig=None)
         db.add(d)
         _create_audit(db, user_id, "assign", "donation", d.id, before=before, after={"status": d.status.name, "batch_id": batch.id})
     _create_audit(db, user_id, "create", "batch", batch.id, before=None, after={"batch_code": batch.batch_code, "total_volume_ml": batch.total_volume_ml})
@@ -502,13 +530,16 @@ def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, 
 
 
 def start_pasteurisation(db: Session, batch_id: str, operator_id: str, device_id: str):
+    from .state_machines import transition_batch_state
+    from transitions.core import MachineError
     b = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
     if not b:
         return None
-    if b.status not in [models.BatchStatus.Created, models.BatchStatus.Quarantined]:
-        raise IntegrityError("Batch not in state to start pasteurisation", params={}, orig=None)
     before = {"status": b.status.name}
-    b.status = models.BatchStatus.Pasteurising
+    try:
+        transition_batch_state(b, 'start_pasteurisation')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     record = models.PasteurisationRecord(batch_id=batch_id, device_id=device_id, operator_id=operator_id, start_time=func.now())
     db.add(record)
     _create_audit(db, operator_id, "pasteurise_start", "batch", b.id, before=before, after={"status": b.status.name, "record_id": record.id})
@@ -524,12 +555,14 @@ def complete_pasteurisation(db: Session, batch_id: str, operator_id: str, record
     rec = db.query(models.PasteurisationRecord).filter(models.PasteurisationRecord.id == record_id).first()
     if not rec:
         raise IntegrityError("Pasteurisation record not found", params={}, orig=None)
-    if b.status != models.BatchStatus.Pasteurising:
-        raise IntegrityError("Batch not pasteurising", params={}, orig=None)
+    from .state_machines import transition_batch_state
+    from transitions.core import MachineError
     rec.end_time = func.now()
     rec.log = log
-    b.status = models.BatchStatus.Pasteurised
-    b.status = models.BatchStatus.MicroTestPending
+    try:
+        transition_batch_state(b, 'complete_pasteurisation')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     db.add(rec)
     db.add(b)
     _create_audit(db, operator_id, "pasteurise_complete", "batch", b.id, before={"status": models.BatchStatus.Pasteurising.name}, after={"status": b.status.name})
@@ -556,31 +589,117 @@ def post_micro_result(db: Session, sample_id: str, organism: str, quantitative_v
         raise IntegrityError("Sample not found", params={}, orig=None)
     r = models.MicroResult(sample_id=sample_id, organism=organism, quantitative_value=quantitative_value, threshold_flag=threshold_flag, reported_at=func.now())
     db.add(r)
-    # if positive threshold, quarantine the batch
-    if threshold_flag:
-        b = db.query(models.Batch).filter(models.Batch.id == s.batch_id).first()
-        if b:
-            before = {"status": b.status.name}
-            b.status = models.BatchStatus.Quarantined
+    from .state_machines import transition_batch_state
+    from transitions.core import MachineError
+    b = db.query(models.Batch).filter(models.Batch.id == s.batch_id).first()
+    if b:
+        before = {"status": b.status.name}
+        # if positive threshold, quarantine the batch
+        if threshold_flag:
+            try:
+                transition_batch_state(b, 'quarantine')
+            except MachineError as e:
+                raise IntegrityError(f"Cannot quarantine batch: {str(e)}", params={}, orig=None)
             db.add(b)
             _create_audit(db, user_id, "quarantine", "batch", b.id, before=before, after={"status": b.status.name, "reason": "micro_positive"})
+        # if negative threshold and batch is pending test, mark as Tested
+        elif b.status == models.BatchStatus.MicroTestPending:
+            try:
+                transition_batch_state(b, 'mark_tested')
+            except MachineError as e:
+                raise IntegrityError(f"Cannot mark batch as tested: {str(e)}", params={}, orig=None)
+            db.add(b)
+            _create_audit(db, user_id, "test_complete", "batch", b.id, before=before, after={"status": b.status.name, "result": "negative"})
     _create_audit(db, user_id, "create", "micro_result", s.id, before=None, after={"organism": organism, "threshold": threshold_flag})
     db.commit()
     db.refresh(r)
     return r
 
 
-def release_batch(db: Session, batch_id: str, approver_id: str, approver2_id: str = None):
+def process_post_pasteurisation_results(db: Session, batch_id: str, user_id: str = None):
+    """
+    Check all post-pasteurisation samples for a batch and update status:
+    - All negative → Tested → Released
+    - Any positive → TestingFailed
+    """
+    from .state_machines import transition_batch_state
+    from transitions.core import MachineError
+    
     b = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
     if not b:
         raise IntegrityError("Batch not found", params={}, orig=None)
-    if b.status != models.BatchStatus.Tested:
-        raise IntegrityError("Batch not in Tested state", params={}, orig=None)
+    
+    # Get all post-pasteurisation samples for this batch
+    samples = db.query(models.Sample).filter(
+        models.Sample.batch_id == batch_id,
+        models.Sample.sample_type == 'post-pasteurisation'
+    ).all()
+    
+    if not samples or len(samples) < 2:
+        raise IntegrityError("Insufficient post-pasteurisation samples", params={}, orig=None)
+    
+    # Check if all samples have results
+    all_have_results = all(
+        db.query(models.MicroResult).filter(
+            models.MicroResult.sample_id == sample.id
+        ).first() is not None
+        for sample in samples
+    )
+    
+    if not all_have_results:
+        raise IntegrityError("Not all samples have results posted", params={}, orig=None)
+    
+    # Check for any positive results
+    has_positive = False
+    for sample in samples:
+        result = db.query(models.MicroResult).filter(
+            models.MicroResult.sample_id == sample.id
+        ).first()
+        if result and result.threshold_flag:
+            has_positive = True
+            break
+    
+    before = {"status": b.status.name}
+    
+    try:
+        if has_positive:
+            # Any positive result → fail
+            transition_batch_state(b, 'fail_testing')
+            _create_audit(db, user_id or 'system', "fail_testing", "batch", b.id, 
+                         before=before, after={"status": b.status.name, "reason": "positive_culture"})
+        else:
+            # All negative → tested (if not already), then auto-release
+            if b.status != models.BatchStatus.Tested and b.status != models.BatchStatus.Released:
+                transition_batch_state(b, 'mark_tested')
+            
+            # Only release if not already released
+            if b.status != models.BatchStatus.Released:
+                transition_batch_state(b, 'release')
+            
+            _create_audit(db, user_id or 'system', "auto_release", "batch", b.id, 
+                         before=before, after={"status": b.status.name, "reason": "negative_post_pasteurisation"})
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
+    
+    db.commit()
+    db.refresh(b)
+    return b
+
+
+def release_batch(db: Session, batch_id: str, approver_id: str, approver2_id: str = None):
+    from .state_machines import transition_batch_state
+    from transitions.core import MachineError
+    b = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
+    if not b:
+        raise IntegrityError("Batch not found", params={}, orig=None)
     # simple two-person verification: require approver2_id to be provided
     if not approver2_id:
         raise IntegrityError("Two-person approval required", params={}, orig=None)
     before = {"status": b.status.name}
-    b.status = models.BatchStatus.Released
+    try:
+        transition_batch_state(b, 'release')
+    except MachineError as e:
+        raise IntegrityError(f"Invalid state transition: {str(e)}", params={}, orig=None)
     _create_audit(db, approver_id, "release", "batch", b.id, before=before, after={"status": b.status.name, "approved_by": [approver_id, approver2_id]})
     db.commit()
     db.refresh(b)
@@ -596,16 +715,80 @@ def administer_bottle(db: Session, bottle_id: str, baby_id: str, admin_user1: st
     if not batch or batch.status != models.BatchStatus.Released:
         raise IntegrityError("Bottle's batch not released", params={}, orig=None)
     # defrost window check: must be within 24 hours of defrost_started_at
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 
     if not bottle.defrost_started_at:
         raise IntegrityError("Bottle not defrosted", params={}, orig=None)
-    if datetime.utcnow() - bottle.defrost_started_at > timedelta(hours=24):
-        raise IntegrityError("Defrost window exceeded", params={}, orig=None)
+    
+    # Use timezone-aware datetime to match database timestamp
+    now = datetime.now(timezone.utc)
+    # If defrost_started_at is naive, make it timezone-aware
+    defrost_time = bottle.defrost_started_at
+    if defrost_time.tzinfo is None:
+        defrost_time = defrost_time.replace(tzinfo=timezone.utc)
+    
+    if now - defrost_time > timedelta(hours=24):
+        raise IntegrityError("Defrost window exceeded (24 hour limit)", params={}, orig=None)
     # record administration
     bottle.allocated_to = baby_id
     bottle.admin_status = "Administered"
     _create_audit(db, admin_user1, "administer", "bottle", bottle.id, before=None, after={"baby_id": baby_id, "admin_by": [admin_user1, admin_user2]})
+    db.commit()
+    db.refresh(bottle)
+    return bottle
+
+
+def allocate_bottle(db: Session, bottle_id: str, baby_id: str, user_id: str = None):
+    """
+    Allocate a bottle to a specific baby/patient.
+    Bottle must be from a Released batch.
+    """
+    bottle = db.query(models.Bottle).filter(models.Bottle.id == bottle_id).first()
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    # Ensure batch is released
+    batch = db.query(models.Batch).filter(models.Batch.id == bottle.batch_id).first()
+    if not batch or batch.status != models.BatchStatus.Released:
+        raise IntegrityError("Cannot allocate bottle - batch not released", params={}, orig=None)
+    
+    # Check if already allocated
+    if bottle.allocated_to:
+        raise IntegrityError(f"Bottle already allocated to {bottle.allocated_to}", params={}, orig=None)
+    
+    before = {"allocated_to": bottle.allocated_to}
+    bottle.allocated_to = baby_id
+    db.add(bottle)
+    _create_audit(db, user_id, "allocate", "bottle", bottle.id, before=before, after={"allocated_to": baby_id})
+    db.commit()
+    db.refresh(bottle)
+    return bottle
+
+
+def defrost_bottle(db: Session, bottle_id: str, user_id: str = None):
+    """
+    Record that a bottle has been taken out of freezer and defrosting has started.
+    This starts the 24-hour countdown for administration.
+    """
+    from datetime import datetime, timezone
+    
+    bottle = db.query(models.Bottle).filter(models.Bottle.id == bottle_id).first()
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    # Ensure batch is released
+    batch = db.query(models.Batch).filter(models.Batch.id == bottle.batch_id).first()
+    if not batch or batch.status != models.BatchStatus.Released:
+        raise IntegrityError("Cannot defrost bottle - batch not released", params={}, orig=None)
+    
+    # Check if already defrosted
+    if bottle.defrost_started_at:
+        raise IntegrityError(f"Bottle already defrosted at {bottle.defrost_started_at}", params={}, orig=None)
+    
+    before = {"defrost_started_at": None}
+    bottle.defrost_started_at = datetime.now(timezone.utc)
+    db.add(bottle)
+    _create_audit(db, user_id, "defrost", "bottle", bottle.id, before=before, after={"defrost_started_at": bottle.defrost_started_at.isoformat()})
     db.commit()
     db.refresh(bottle)
     return bottle

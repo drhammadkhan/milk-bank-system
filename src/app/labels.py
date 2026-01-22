@@ -44,7 +44,7 @@ def generate_batch_label_zpl(batch_code: str, bottle_number: int = None, total_b
     return zpl
 
 
-def generate_batch_labels_zpl(batch_code: str, number_of_bottles: int = 1) -> str:
+def generate_batch_labels_zpl(batch_code: str, number_of_bottles: int = 1, batch_date: str = None) -> str:
     """
     Generate ZPL format for multiple labels in a batch (2.5cm x 5cm each).
     One label per bottle.
@@ -52,6 +52,7 @@ def generate_batch_labels_zpl(batch_code: str, number_of_bottles: int = 1) -> st
     Args:
         batch_code: The batch code to print
         number_of_bottles: Number of labels to generate
+        batch_date: The batch creation date (format: YYYY-MM-DD)
     
     Returns:
         ZPL format string with multiple label definitions
@@ -62,7 +63,6 @@ def generate_batch_labels_zpl(batch_code: str, number_of_bottles: int = 1) -> st
     for i in range(1, number_of_bottles + 1):
         # Start each label
         zpl = '^XA\n'
-        zpl += '^DF\n'
         zpl += '^PW400\n'  # Label width (5cm = 400 dots)
         zpl += '^PH200\n'  # Label height (2.5cm = 200 dots)
         
@@ -71,11 +71,18 @@ def generate_batch_labels_zpl(batch_code: str, number_of_bottles: int = 1) -> st
         zpl += '^A0N,20,20\n'
         zpl += f'^FD{batch_code}^FS\n'
         
-        # Barcode
-        zpl += '^FO10,40\n'
+        # Batch date and bottle number
+        if batch_date:
+            zpl += '^FO10,35\n'
+            zpl += '^A0N,15,15\n'
+            zpl += f'^FD{batch_date} - Bottle {i}/{number_of_bottles}^FS\n'
+        
+        # Barcode with bottle number
+        bottle_code = f'{batch_code}-{i}'
+        zpl += '^FO10,55\n'
         zpl += '^BY2,2.0,50\n'
         zpl += '^BCN,50,Y,N,N\n'
-        zpl += f'^FD{batch_code}^FS\n'
+        zpl += f'^FD{bottle_code}^FS\n'
         
         zpl += '^XZ\n'
         

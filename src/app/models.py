@@ -146,17 +146,6 @@ class DonationStatus(enum.Enum):
     Disposed = "Disposed"
 
 
-class Donation(Base):
-    __tablename__ = "donations"
-    id = Column(String, primary_key=True, default=gen_uuid)
-    barcode = Column(String, unique=True, index=True, nullable=False)
-    donor_id = Column(String, ForeignKey("donors.id"), nullable=False)
-    collected_at = Column(DateTime(timezone=True), server_default=func.now())
-    volume_ml = Column(Float, nullable=False, default=0.0)
-    status = Column(Enum(DonationStatus), nullable=False, default=DonationStatus.Collected)
-    intake_user = Column(String)
-
-
 class BatchStatus(enum.Enum):
     Created = "Created"
     Pasteurising = "Pasteurising"
@@ -295,6 +284,8 @@ class DonationRecord(Base):
     donor_id = Column(String, ForeignKey("donors.id"), nullable=False)
     donation_date = Column(DateTime(timezone=True), nullable=False)
     number_of_bottles = Column(Integer, nullable=False)
+    volume_ml = Column(Float, nullable=False, default=0.0)
+    status = Column(Enum(DonationStatus), nullable=False, default=DonationStatus.Accepted)
     notes = Column(String, nullable=True)
     acknowledged = Column(Boolean, default=False)
     acknowledged_by = Column(String, nullable=True)

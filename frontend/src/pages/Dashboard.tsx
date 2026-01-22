@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { donors, batches, dispatches, donations } from '../api';
+import { VERSION, LAST_UPDATED } from '../version';
 
 interface DashboardStats {
   totalDonors: number;
@@ -112,8 +113,16 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome to Milk Bank Traceability System</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-gray-600">Welcome to Milk Bank Traceability System</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-gray-700">Version {VERSION}</p>
+            <p className="text-xs text-gray-500 mt-1">Last updated: {LAST_UPDATED}</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Grid */}

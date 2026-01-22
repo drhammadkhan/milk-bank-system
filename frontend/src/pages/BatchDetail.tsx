@@ -40,6 +40,12 @@ export const BatchDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'pre-pasteurisation-micro' | 'pasteurisation' | 'microbiology'>('overview');
   const [sample1Result, setSample1Result] = useState('');
   const [sample2Result, setSample2Result] = useState('');
+  const [sample1Details, setSample1Details] = useState('');
+  const [sample2Details, setSample2Details] = useState('');
+  const [prePasteurisationDate, setPrePasteurisationDate] = useState('');
+  const [prePasteurisationComments, setPrePasteurisationComments] = useState('');
+  const [savingPrePasteurisation, setSavingPrePasteurisation] = useState(false);
+  const [prePasteurisationSaved, setPrePasteurisationSaved] = useState(false);
   const [pasteurisationData, setPasteurisationData] = useState({
     operatorId: '',
     deviceId: '',
@@ -47,9 +53,19 @@ export const BatchDetail: React.FC = () => {
     endTime: '',
     temperature: '',
     duration: '',
-    notes: ''
+    notes: '',
+    completionNotes: ''
   });
   const [pasteurisationStarted, setPasteurisationStarted] = useState(false);
+  const [pasteurisationRecordId, setPasteurisationRecordId] = useState<string | null>(null);
+  const [postSample1Result, setPostSample1Result] = useState('');
+  const [postSample2Result, setPostSample2Result] = useState('');
+  const [postSample1Details, setPostSample1Details] = useState('');
+  const [postSample2Details, setPostSample2Details] = useState('');
+  const [postPasteurisationDate, setPostPasteurisationDate] = useState('');
+  const [postPasteurisationComments, setPostPasteurisationComments] = useState('');
+  const [savingPostPasteurisation, setSavingPostPasteurisation] = useState(false);
+  const [postPasteurisationSaved, setPostPasteurisationSaved] = useState(false);
 
   useEffect(() => {
     if (id) loadBatch();
@@ -141,6 +157,168 @@ export const BatchDetail: React.FC = () => {
     }
   };
 
+  const handleSavePrePasteurisationResults = async () => {
+    if (!sample1Result || !sample2Result) {
+      alert('Please select results for both samples');
+      return;
+    }
+
+    try {
+      setSavingPrePasteurisation(true);
+      
+      // Note: Using samples API from frontend/src/api.ts
+      const sample1Payload = { sample_code: `${batch?.batch_code}-PRE-1` };
+      const sample1Response = await batches.createSample(id!, sample1Payload);
+
+      await batches.postSampleResult(sample1Response.data.sample_id, {
+        test_type: 'culture',
+        organism: sample1Result === 'positive-culture' ? sample1Details : null,
+        threshold_flag: sample1Result === 'positive-culture',
+        notes: sample1Details || undefined,
+        posted_by: 'system'
+      });
+
+      const sample2Payload = { sample_code: `${batch?.batch_code}-PRE-2` };
+      const sample2Response = await batches.createSample(id!, sample2Payload);
+
+      await batches.postSampleResult(sample2Response.data.sample_id, {
+        test_type: 'culture',
+        organism: sample2Result === 'positive-culture' ? sample2Details : null,
+        threshold_flag: sample2Result === 'positive-culture',
+        notes: sample2Details || undefined,
+        posted_by: 'system'
+      });
+
+      await loadBatch();
+      setPrePasteurisationSaved(true);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || 'Failed to save results');
+    } finally {
+      setSavingPrePasteurisation(false);
+    }
+  };
+
+  const handleClearPrePasteurisationForm = () => {
+    setSample1Result('');
+    setSample2Result('');
+    setSample1Details('');
+    setSample2Details('');
+    setPrePasteurisationDate('');
+    setPrePasteurisationComments('');
+    setPrePasteurisationSaved(false);
+  };
+
+  const handleEditPrePasteurisationResults = () => {
+    setPrePasteurisationSaved(false);
+  };
+
+  const handleSavePostPasteurisationResults = async () => {
+    if (!id || !postPasteurisationDate || !postSample1Result || !postSample2Result) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setSavingPostPasteurisation(true);
+    try {
+      // Create two post-pasteurisation samples
+      const sample1 = await batches.createSample(id, {
+        sample_type: 'post-pasteurisation',
+        user_id: 'system',
+        sample_code: `${batch?.batch_code}-POST-1`
+      });
+
+      const sample2 = await batches.createSample(id, {
+        sample_type: 'post-pasteurisation',
+        user_id: 'system',
+        sample_code: `${batch?.batch_code}-POST-2`
+      });
+
+      // Post results for sample 1
+      await batches.postSampleResult(sample1.data.sample_id, {
+        test_type: 'culture',
+        organism: postSample1Result === 'positive-culture' ? postSample1Details : null,
+        threshold_flag: postSample1Result === 'positive-culture',
+        notes: postSample1Details || undefined,
+        posted_by: 'system'
+      });
+
+      // Post results for sample 2
+      await batches.postSampleResult(sample2.data.sample_id, {
+        test_type: 'culture',
+        organism: postSample2Result === 'positive-culture' ? postSample2Details : null,
+        threshold_flag: postSample2Result === 'positive-culture',
+        notes: postSample2Details || undefined,
+        posted_by: 'system'
+      });
+
+      // Process results and auto-update batch status (Released or TestingFailed)
+      await batches.processPostPasteurisation(id);
+
+      await loadBatch();
+      setPostPasteurisationSaved(true);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || 'Failed to save results');
+    } finally {
+      setSavingPostPasteurisation(false);
+    }
+  };
+
+  const handleClearPostPasteurisationForm = () => {
+    setPostSample1Result('');
+    setPostSample2Result('');
+    setPostSample1Details('');
+    setPostSample2Details('');
+    setPostPasteurisationDate('');
+    setPostPasteurisationComments('');
+    setPostPasteurisationSaved(false);
+  };
+
+  const handleEditPostPasteurisationResults = () => {
+    setPostPasteurisationSaved(false);
+  };
+
+  const handleStartPasteurisation = async () => {
+    if (!id || !pasteurisationData.operatorId || !pasteurisationData.deviceId) {
+      alert('Operator ID and Device ID are required');
+      return;
+    }
+
+    try {
+      const response = await batches.startPasteurisation(id, {
+        operator_id: pasteurisationData.operatorId,
+        device_id: pasteurisationData.deviceId
+      });
+      
+      setPasteurisationRecordId(response.data.record_id);
+      await loadBatch();
+      setPasteurisationStarted(true);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || 'Failed to start pasteurisation');
+    }
+  };
+
+  const handleCompletePasteurisation = async () => {
+    if (!id || !pasteurisationData.operatorId || !pasteurisationRecordId) {
+      alert('Operator ID is required and pasteurisation must be started first');
+      return;
+    }
+
+    try {
+      await batches.completePasteurisation(id, {
+        operator_id: pasteurisationData.operatorId,
+        record_id: pasteurisationRecordId,
+        result_notes: pasteurisationData.completionNotes || undefined
+      });
+      
+      await loadBatch();
+      setPasteurisationStarted(true);
+      // Clear localStorage after successful completion
+      localStorage.removeItem(`pasteurisation-${id}`);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || 'Failed to complete pasteurisation');
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center text-gray-600">Loading batch...</div>;
   }
@@ -174,12 +352,16 @@ export const BatchDetail: React.FC = () => {
         Back to Batches
       </button>
 
+      <div className="mb-6">
+        <h1 className="text-4xl font-bold text-gray-900">Batch Processing</h1>
+      </div>
+
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
               {getStatusIcon(batch.status)}
-              <h1 className="text-3xl font-bold text-gray-900">{batch.batch_code}</h1>
+              <h2 className="text-3xl font-bold text-gray-900">{batch.batch_code}</h2>
             </div>
             <p className="text-gray-600">
               Created {new Date(batch.created_at).toLocaleDateString()}
@@ -245,6 +427,8 @@ export const BatchDetail: React.FC = () => {
             >
               {tab === 'pre-pasteurisation-micro' 
                 ? 'Pre-pasteurisation Microbiology'
+                : tab === 'microbiology'
+                ? 'Post-pasteurisation Microbiology'
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
@@ -323,7 +507,10 @@ export const BatchDetail: React.FC = () => {
                 </label>
                 <input
                   type="date"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={prePasteurisationDate}
+                  onChange={(e) => setPrePasteurisationDate(e.target.value)}
+                  disabled={prePasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -334,7 +521,8 @@ export const BatchDetail: React.FC = () => {
                 <select 
                   value={sample1Result}
                   onChange={(e) => setSample1Result(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={prePasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select result</option>
                   <option value="negative-culture">Negative Culture</option>
@@ -346,9 +534,12 @@ export const BatchDetail: React.FC = () => {
                       Sample 1 Results Detail
                     </label>
                     <textarea
+                      value={sample1Details}
+                      onChange={(e) => setSample1Details(e.target.value)}
                       rows={2}
+                      disabled={prePasteurisationSaved}
                       placeholder="Enter details of positive culture results"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                   </div>
                 )}
@@ -361,7 +552,8 @@ export const BatchDetail: React.FC = () => {
                 <select 
                   value={sample2Result}
                   onChange={(e) => setSample2Result(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={prePasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select result</option>
                   <option value="negative-culture">Negative Culture</option>
@@ -373,9 +565,12 @@ export const BatchDetail: React.FC = () => {
                       Sample 2 Results Detail
                     </label>
                     <textarea
+                      value={sample2Details}
+                      onChange={(e) => setSample2Details(e.target.value)}
                       rows={2}
+                      disabled={prePasteurisationSaved}
                       placeholder="Enter details of positive culture results"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                   </div>
                 )}
@@ -386,20 +581,47 @@ export const BatchDetail: React.FC = () => {
                   Comments
                 </label>
                 <textarea
+                  value={prePasteurisationComments}
+                  onChange={(e) => setPrePasteurisationComments(e.target.value)}
                   rows={4}
+                  disabled={prePasteurisationSaved}
                   placeholder="Enter any comments or observations"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
 
             <div className="flex gap-4">
-              <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
-                Save Results
-              </button>
-              <button className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
-                Clear Form
-              </button>
+              {prePasteurisationSaved ? (
+                <>
+                  <button 
+                    disabled
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium cursor-not-allowed flex items-center gap-2">
+                    <CheckCircle size={16} />
+                    Saved
+                  </button>
+                  <button 
+                    onClick={handleEditPrePasteurisationResults}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                    Edit
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleSavePrePasteurisationResults}
+                    disabled={savingPrePasteurisation}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    {savingPrePasteurisation ? 'Saving...' : 'Save Results'}
+                  </button>
+                  <button 
+                    onClick={handleClearPrePasteurisationForm}
+                    disabled={savingPrePasteurisation}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium disabled:opacity-50">
+                    Clear Form
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -480,7 +702,7 @@ export const BatchDetail: React.FC = () => {
                   />
                 </div>
                 <button 
-                  onClick={() => setPasteurisationStarted(true)}
+                  onClick={handleStartPasteurisation}
                   className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
                 >
                   <Play size={18} />
@@ -531,12 +753,16 @@ export const BatchDetail: React.FC = () => {
                       Completion Notes
                     </label>
                     <textarea
+                      value={pasteurisationData.completionNotes}
+                      onChange={(e) => setPasteurisationData({...pasteurisationData, completionNotes: e.target.value})}
                       rows={3}
                       placeholder="Record final temperature readings, observations, or any issues encountered"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
-                  <button className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+                  <button 
+                    onClick={handleCompletePasteurisation}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
                     <CheckCircle size={18} />
                     Confirm Pasteurisation Complete
                   </button>
@@ -588,23 +814,139 @@ export const BatchDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Microbiology Tab */}
+        {/* Post-pasteurisation Microbiology Tab */}
         {activeTab === 'microbiology' && (
-          <div className="space-y-4">
-            {batch.status === 'Pasteurised' ? (
-              <button className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition">
-                <Zap size={18} />
-                Create Micro Sample
-              </button>
-            ) : batch.status === 'MicroTestPending' ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-yellow-700 font-medium">Awaiting test results...</p>
+          <div className="space-y-6">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-purple-900 mb-3">Post-pasteurisation Microbiology Testing</h3>
+              <p className="text-sm text-purple-800 mb-4">
+                Record microbiology test results after pasteurisation to verify the effectiveness of the pasteurisation process.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date Taken
+                </label>
+                <input
+                  type="date"
+                  value={postPasteurisationDate}
+                  onChange={(e) => setPostPasteurisationDate(e.target.value)}
+                  disabled={postPasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
               </div>
-            ) : (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-700 font-medium">Microbiology testing complete</p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Result for Sample 1
+                </label>
+                <select 
+                  value={postSample1Result}
+                  onChange={(e) => setPostSample1Result(e.target.value)}
+                  disabled={postPasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select result</option>
+                  <option value="negative-culture">Negative Culture</option>
+                  <option value="positive-culture">Positive Culture</option>
+                </select>
+                {postSample1Result === 'positive-culture' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sample 1 Results Detail
+                    </label>
+                    <textarea
+                      value={postSample1Details}
+                      onChange={(e) => setPostSample1Details(e.target.value)}
+                      rows={2}
+                      disabled={postPasteurisationSaved}
+                      placeholder="Enter details of positive culture results"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                )}
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Result for Sample 2
+                </label>
+                <select 
+                  value={postSample2Result}
+                  onChange={(e) => setPostSample2Result(e.target.value)}
+                  disabled={postPasteurisationSaved}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select result</option>
+                  <option value="negative-culture">Negative Culture</option>
+                  <option value="positive-culture">Positive Culture</option>
+                </select>
+                {postSample2Result === 'positive-culture' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sample 2 Results Detail
+                    </label>
+                    <textarea
+                      value={postSample2Details}
+                      onChange={(e) => setPostSample2Details(e.target.value)}
+                      rows={2}
+                      disabled={postPasteurisationSaved}
+                      placeholder="Enter details of positive culture results"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Comments
+                </label>
+                <textarea
+                  value={postPasteurisationComments}
+                  onChange={(e) => setPostPasteurisationComments(e.target.value)}
+                  rows={4}
+                  disabled={postPasteurisationSaved}
+                  placeholder="Enter any comments or observations"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              {postPasteurisationSaved ? (
+                <>
+                  <button 
+                    disabled
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium cursor-not-allowed flex items-center gap-2">
+                    <CheckCircle size={16} />
+                    Saved
+                  </button>
+                  <button 
+                    onClick={handleEditPostPasteurisationResults}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                    Edit
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleSavePostPasteurisationResults}
+                    disabled={savingPostPasteurisation}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    {savingPostPasteurisation ? 'Saving...' : 'Save Results'}
+                  </button>
+                  <button 
+                    onClick={handleClearPostPasteurisationForm}
+                    disabled={savingPostPasteurisation}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium disabled:opacity-50">
+                    Clear Form
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -5,7 +5,8 @@ import { AlertCircle, CheckCircle, Package } from 'lucide-react';
 
 export const NewBatch: React.FC = () => {
   const [batchCode, setBatchCode] = useState('');
-  const [batchDate, setBatchDate] = useState('');
+  const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  const [batchDate, setBatchDate] = useState(today);
   const [hospitalNumber, setHospitalNumber] = useState('');
   const [numberOfBottles, setNumberOfBottles] = useState('');
   const [donationIds, setDonationIds] = useState('');
@@ -28,7 +29,18 @@ export const NewBatch: React.FC = () => {
         const y = today.getFullYear();
         const m = String(today.getMonth() + 1).padStart(2, '0');
         const d = String(today.getDate()).padStart(2, '0');
-        setBatchCode(`BATCH-${y}${m}${d}`);
+        const baseCode = `BATCH-${y}${m}${d}`;
+        
+        // Fetch next available batch code from API
+        batches.getNextCode(baseCode)
+          .then(res => {
+            if (res.data && res.data.batch_code) {
+              setBatchCode(res.data.batch_code);
+            } else {
+              setBatchCode(baseCode);
+            }
+          })
+          .catch(() => setBatchCode(baseCode));
       }
       
       // Fetch donation details to get hospital number and donor name
@@ -148,7 +160,13 @@ export const NewBatch: React.FC = () => {
         batchData.number_of_bottles = parseInt(numberOfBottles);
       }
 
-      await batches.create(batchData);
+      const response = await batches.create(batchData);
+      
+      // Update the batch code in the form to show the actual created code
+      // (backend may have added a sequence number if there was a duplicate)
+      if (response.data && response.data.batch_code) {
+        setBatchCode(response.data.batch_code);
+      }
 
       setSuccess(true);
       setTimeout(() => navigate('/batches'), 2000);
@@ -181,6 +199,9 @@ export const NewBatch: React.FC = () => {
               <h3 className="text-lg font-bold text-green-900 mb-1">
                 Batch Created Successfully!
               </h3>
+              <p className="text-sm text-green-700 mb-2">
+                Batch Code: <span className="font-semibold">{batchCode}</span>
+              </p>
               <p className="text-sm text-green-700">
                 Redirecting to batches list in 2 seconds...
               </p>
@@ -190,6 +211,22 @@ export const NewBatch: React.FC = () => {
       )}
 
       <div className="bg-white rounded-lg shadow p-8">
+        {success && (
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg mb-6 p-4">
+            <div className="flex gap-3">
+              <CheckCircle size={20} className="text-green-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-green-900">
+                  Batch Created: {batchCode}
+                </h3>
+                <p className="text-sm text-green-700">
+                  Redirecting to batches list...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -201,7 +238,8 @@ export const NewBatch: React.FC = () => {
               onChange={(e) => setBatchCode(e.target.value)}
               placeholder="e.g., BATCH-2024-001"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              disabled={success}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <p className="mt-1 text-sm text-gray-500">
               Enter a unique identifier for this batch

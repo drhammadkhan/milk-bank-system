@@ -135,30 +135,6 @@ def revert_donor_approval(donor_id: str, db: Session = Depends(get_db)):
     return d
 
 
-@router.post("/donations", response_model=schemas.DonationRead)
-def create_donation(donation: schemas.DonationCreate, db: Session = Depends(get_db)):
-    try:
-        d = crud.create_donation(db, donation)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    if not d:
-        raise HTTPException(status_code=400, detail="Error creating donation")
-    return d
-
-
-@router.get("/donations")
-def list_donations(db: Session = Depends(get_db)):
-    return crud.get_all_donations(db)
-
-
-@router.get("/donations/{donation_id}", response_model=schemas.DonationRead)
-def get_donation(donation_id: str, db: Session = Depends(get_db)):
-    d = crud.get_donation(db, donation_id)
-    if not d:
-        raise HTTPException(status_code=404, detail="Donation not found")
-    return d
-
-
 @router.post("/batches")
 def create_batch(batch_create: schemas.BatchCreate, db: Session = Depends(get_db)):
     # Use the schema to ensure proper validation and datetime parsing
@@ -182,6 +158,37 @@ def list_batches(db: Session = Depends(get_db)):
     return crud.get_all_batches(db)
 
 
+@router.get("/batches/next-code/{base_code}")
+def get_next_batch_code(base_code: str, db: Session = Depends(get_db)):
+    """Get the next available batch code with auto-incrementing sequence"""
+    import re
+    
+    # Check if base code already exists
+    existing = db.query(models.Batch).filter(models.Batch.batch_code == base_code).first()
+    if not existing:
+        return {"batch_code": base_code}
+    
+    # Find all batches with same base code (including sequenced variants)
+    all_batches = db.query(models.Batch.batch_code).filter(
+        models.Batch.batch_code.like(f"{base_code}%")
+    ).all()
+    
+    # Extract sequence numbers
+    max_sequence = 0
+    for (code,) in all_batches:
+        if code == base_code:
+            max_sequence = max(max_sequence, 0)
+        else:
+            match = re.match(rf"{re.escape(base_code)}-(\d+)", code)
+            if match:
+                seq_num = int(match.group(1))
+                max_sequence = max(max_sequence, seq_num)
+    
+    # Return next sequence
+    next_sequence = max_sequence + 1
+    return {"batch_code": f"{base_code}-{next_sequence:03d}"}
+
+
 @router.get("/batches/{batch_id}")
 def get_batch(batch_id: str, db: Session = Depends(get_db)):
     b = crud.get_batch(db, batch_id)
@@ -193,31 +200,49 @@ def get_batch(batch_id: str, db: Session = Depends(get_db)):
 @router.get("/batches/{batch_id}/labels/zpl")
 def get_batch_labels_zpl(batch_id: str, db: Session = Depends(get_db)):
     """Generate ZPL format labels for all bottles in a batch (Zebra ZD410) and return as downloadable file"""
+    from datetime import datetime
     batch = crud.get_batch(db, batch_id)
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
     
     # Generate ZPL for the batch with number of bottles
-    number_of_bottles = batch.number_of_bottles or 1
-    zpl_content = generate_batch_labels_zpl(batch.batch_code, number_of_bottles)
+    number_of_bottles = batch.get("number_of_bottles") or 1
+    
+    # Format the date properly (just the date part, no time)
+    batch_date = batch.get("batch_date")
+    if batch_date:
+        if isinstance(batch_date, str):
+            # Parse and reformat if it's a string
+            try:
+                date_obj = datetime.fromisoformat(batch_date.replace('Z', '+00:00'))
+                batch_date = date_obj.strftime("%d/%m/%Y")
+            except:
+                batch_date = str(batch_date).split()[0]  # Fallback: just take date part
+        else:
+            # If it's already a date object
+            batch_date = batch_date.strftime("%d/%m/%Y")
+    else:
+        batch_date = ""
+    
+    zpl_content = generate_batch_labels_zpl(batch["batch_code"], number_of_bottles, batch_date)
     
     # Return as downloadable file with appropriate headers
     return Response(
         content=zpl_content,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename={batch.batch_code}_labels.zpl"}
+        headers={"Content-Disposition": f"attachment; filename={batch['batch_code']}_labels.zpl"}
     )
 
 
-@router.post("/donations/{donation_id}/accept")
+@router.post("/donations/{donation_id}/accept", response_model=schemas.DonationRead)
 def accept_donation(donation_id: str, db: Session = Depends(get_db), user_id: str = None):
     try:
         d = crud.accept_donation(db, donation_id, user_id=user_id)
+        if not d:
+            raise HTTPException(status_code=404, detail="Donation not found")
+        return d
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    if not d:
-        raise HTTPException(status_code=404, detail="Donation not found")
-    return {"id": d.id, "status": d.status.name}
 
 
 @router.post("/batches/{batch_id}/pasteurise/start")
@@ -250,10 +275,27 @@ def create_sample(batch_id: str, payload: dict = None, db: Session = Depends(get
 @router.post("/samples/{sample_id}/results")
 def post_result(sample_id: str, payload: dict, db: Session = Depends(get_db)):
     try:
-        r = crud.post_micro_result(db, sample_id, payload.get("organism"), payload.get("quantitative"), payload.get("threshold_flag", False), user_id=payload.get("user_id"))
+        r = crud.post_micro_result(
+            db, 
+            sample_id, 
+            payload.get("organism"), 
+            payload.get("quantitative_value"),  # Fixed: was "quantitative"
+            payload.get("threshold_flag", False), 
+            user_id=payload.get("user_id")
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"result_id": r.id}
+
+
+@router.post("/batches/{batch_id}/process-post-pasteurisation")
+def process_post_pasteurisation(batch_id: str, db: Session = Depends(get_db), user_id: str = None):
+    """Process post-pasteurisation microbiology results and auto-update batch status"""
+    try:
+        b = crud.process_post_pasteurisation_results(db, batch_id, user_id=user_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"batch_id": b.id, "status": b.status.name}
 
 
 @router.post("/batches/{batch_id}/release")
@@ -263,6 +305,42 @@ def release_batch(batch_id: str, payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"batch_id": b.id, "status": b.status.name}
+
+
+@router.post("/bottles/{bottle_id}/allocate")
+def allocate_bottle(bottle_id: str, payload: dict, db: Session = Depends(get_db)):
+    """Allocate a bottle to a specific baby/patient"""
+    try:
+        b = crud.allocate_bottle(
+            db, 
+            bottle_id, 
+            baby_id=payload.get("baby_id"), 
+            user_id=payload.get("user_id")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "bottle_id": b.id, 
+        "allocated_to": b.allocated_to,
+        "message": "Bottle allocated successfully"
+    }
+
+
+@router.post("/bottles/{bottle_id}/defrost")
+def defrost_bottle(bottle_id: str, payload: dict, db: Session = Depends(get_db)):
+    """
+    Record that a bottle has been taken from freezer and defrosting started.
+    Starts the 24-hour countdown for administration.
+    """
+    try:
+        b = crud.defrost_bottle(db, bottle_id, user_id=payload.get("user_id"))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "bottle_id": b.id,
+        "defrost_started_at": b.defrost_started_at.isoformat() if b.defrost_started_at else None,
+        "message": "Bottle defrost started - must be administered within 24 hours"
+    }
 
 
 @router.post("/bottles/{bottle_id}/administer")

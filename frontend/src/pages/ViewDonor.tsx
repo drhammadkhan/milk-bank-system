@@ -30,7 +30,8 @@ export const ViewDonor: React.FC = () => {
   const [error, setError] = useState('');
   const [donorDonations, setDonorDonations] = useState<any[]>([]);
   const [showAddDonation, setShowAddDonation] = useState(false);
-  const [newDonation, setNewDonation] = useState({ donation_date: '', number_of_bottles: 1, notes: '' });
+  const today = new Date().toISOString().split('T')[0];
+  const [newDonation, setNewDonation] = useState({ donation_date: today, number_of_bottles: 1, notes: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const loadDonations = async () => {
@@ -55,7 +56,13 @@ export const ViewDonor: React.FC = () => {
         setLoading(false);
       }
     };
-    if (donorId) load();
+    if (donorId) {
+      load();
+      // Check if URL has #add-donation hash and auto-open the form
+      if (window.location.hash === '#add-donation') {
+        setShowAddDonation(true);
+      }
+    }
   }, [donorId]);
 
   const handleAddDonation = async (e: React.FormEvent) => {
@@ -73,7 +80,8 @@ export const ViewDonor: React.FC = () => {
         number_of_bottles: newDonation.number_of_bottles,
         notes: newDonation.notes || undefined,
       });
-      setNewDonation({ donation_date: '', number_of_bottles: 1, notes: '' });
+      const resetToday = new Date().toISOString().split('T')[0];
+      setNewDonation({ donation_date: resetToday, number_of_bottles: 1, notes: '' });
       setShowAddDonation(false);
       await loadDonations();
     } catch (err: any) {

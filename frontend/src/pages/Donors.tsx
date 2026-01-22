@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { donors } from '../api';
-import { CheckCircle, Plus, Search } from 'lucide-react';
+import { CheckCircle, Plus, Search, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Donor {
@@ -151,6 +151,7 @@ export const DonorList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Contact</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Registered</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Donation</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
               </tr>
             </thead>
@@ -184,6 +185,20 @@ export const DonorList: React.FC = () => {
                   </td>
                   <td className={`px-6 py-4 text-sm ${donor.status === 'Approved' ? 'text-green-800' : 'text-gray-600'}`}>
                     {new Date(donor.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    {donor.status === 'Approved' ? (
+                      <Link
+                        to={`/donors/${donor.id}/add-donation`}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                        title="Add donation"
+                      >
+                        <PlusCircle size={16} />
+                        Add
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Not approved</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex gap-2">

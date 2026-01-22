@@ -39,10 +39,29 @@ export const BatchList: React.FC = () => {
 
   const loadRecentDonations = async () => {
     try {
-      const res = await donations.list();
-      const items: any[] = res.data || [];
+      const [donationsRes, batchesRes] = await Promise.all([
+        donations.list(),
+        batches.list()
+      ]);
+      
+      const items: any[] = donationsRes.data || [];
+      const batchList: any[] = batchesRes.data || [];
+      
+      // Collect all donation IDs that are already in batches
+      const usedDonationIds = new Set<string>();
+      batchList.forEach(batch => {
+        if (batch.donation_ids && Array.isArray(batch.donation_ids)) {
+          batch.donation_ids.forEach((id: string) => usedDonationIds.add(id));
+        }
+      });
+      
+      // Filter out donations that are already used in batches
+      const availableDonations = items.filter(d => 
+        !usedDonationIds.has(d.donation_id) && !usedDonationIds.has(d.id)
+      );
+      
       // Take last 10 by donation_date desc if available
-      const sorted = items
+      const sorted = availableDonations
         .slice()
         .sort((a, b) => new Date(b.donation_date).getTime() - new Date(a.donation_date).getTime())
         .slice(0, 10)

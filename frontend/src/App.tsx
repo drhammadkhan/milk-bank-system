@@ -6,6 +6,7 @@ import { DonorList } from './pages/Donors';
 import { NewDonor } from './pages/NewDonor';
 import { EditDonor } from './pages/EditDonor';
 import { ViewDonor } from './pages/ViewDonor';
+import { AddDonation } from './pages/AddDonation';
 import { BatchList } from './pages/Batches';
 import { NewBatch } from './pages/NewBatch';
 import { BatchDetail } from './pages/BatchDetail';
@@ -24,6 +25,7 @@ function App() {
           <Route path="/donors/new" element={<NewDonor />} />
           <Route path="/donors/:donorId" element={<ViewDonor />} />
           <Route path="/donors/:donorId/edit" element={<EditDonor />} />
+          <Route path="/donors/:donorId/add-donation" element={<AddDonation />} />
           <Route path="/batches" element={<BatchList />} />
           <Route path="/batches/new" element={<NewBatch />} />
           <Route path="/batches/:id" element={<BatchDetail />} />
