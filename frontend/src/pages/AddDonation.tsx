@@ -15,6 +15,7 @@ export const AddDonation: React.FC = () => {
   const [formData, setFormData] = useState({
     donation_date: today,
     number_of_bottles: 1,
+    volume_ml: 0,
     notes: ''
   });
 
@@ -48,6 +49,7 @@ export const AddDonation: React.FC = () => {
         donor_id: donorId!,
         donation_date: formData.donation_date,
         number_of_bottles: formData.number_of_bottles,
+        volume_ml: formData.volume_ml,
         notes: formData.notes || undefined,
       });
       setSuccess(true);
@@ -167,12 +169,26 @@ export const AddDonation: React.FC = () => {
               Number of Bottles <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              min="1"
+              type="text"
               value={formData.number_of_bottles}
               onChange={(e) => setFormData({ ...formData, number_of_bottles: parseInt(e.target.value) || 1 })}
               required
               disabled={submitting || success}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Volume (mL) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.volume_ml}
+              onChange={(e) => setFormData({ ...formData, volume_ml: parseFloat(e.target.value) || 0 })}
+              required
+              disabled={submitting || success}
+              placeholder="Enter volume in milliliters"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
             />
           </div>

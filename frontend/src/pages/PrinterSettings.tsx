@@ -55,9 +55,15 @@ export const PrinterSettings: React.FC = () => {
     try {
       setDiscovering(true);
       const res = await printers.discover();
+      console.log('Discovery response:', res.data);
       const allPrinters = res.data.network_printers || [];
-      setNetworkPrinters(allPrinters.filter((p: PrinterInfo) => p.connection_type === 'network'));
-      setUsbPrinters(allPrinters.filter((p: PrinterInfo) => p.connection_type === 'usb'));
+      console.log('All printers:', allPrinters);
+      const networkPrintersList = allPrinters.filter((p: PrinterInfo) => p.connection_type === 'network');
+      const usbPrintersList = allPrinters.filter((p: PrinterInfo) => p.connection_type === 'usb');
+      console.log('Network printers:', networkPrintersList);
+      console.log('USB printers:', usbPrintersList);
+      setNetworkPrinters(networkPrintersList);
+      setUsbPrinters(usbPrintersList);
       setSystemPrinters(res.data.system_printers || []);
     } catch (err) {
       console.error('Error discovering printers:', err);

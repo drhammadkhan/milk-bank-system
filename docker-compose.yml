@@ -24,6 +24,7 @@ services:
     volumes:
       - ./src:/app/src
       - milkbank_data:/app/data
+      - /var/run/cups/cups.sock:/var/run/cups/cups.sock
     command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - frontend

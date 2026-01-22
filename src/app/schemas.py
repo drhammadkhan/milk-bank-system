@@ -273,6 +273,7 @@ class DonationCreate(BaseModel):
     donor_id: str
     donation_date: Union[str, datetime]
     number_of_bottles: int
+    volume_ml: float = 0.0
     notes: Optional[str] = None
 
     @field_validator('donation_date', mode='before')

@@ -131,6 +131,13 @@ class ZebraPrinterManager:
                     'message': f'Successfully sent to USB printer {config.name}'
                 }
             
+            # If in Docker, provide helpful message about USB limitations
+            if os.path.exists('/.dockerenv'):
+                return {
+                    'success': False,
+                    'message': 'USB printing from Docker requires the printer to be in Network mode. Please configure your Zebra printer for network printing, find its IP address (check printer settings or your router), and use Network connection type instead.'
+                }
+            
             # Fall back to system printer if direct USB fails
             return cls._send_zpl_system_printer(zpl_content, config)
         
@@ -146,6 +153,41 @@ class ZebraPrinterManager:
         system = platform.system()
         
         try:
+            if system == 'Darwin':  # macOS specific handling
+                # On macOS, try to use the CUPS device URI directly via Python
+                # Get the device URI from lpstat
+                try:
+                    result = subprocess.run(
+                        ['lpstat', '-v', config.address],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    
+                    # Parse the device URI
+                    if 'usb://' in result.stdout:
+                        # For USB printers on macOS, we need to use a raw queue
+                        # Let's use the socket method to CUPS port
+                        import socket
+                        
+                        # Create a connection to CUPS (port 631) and send as IPP raw
+                        # Actually, better approach: use lpr with proper MIME type
+                        process = subprocess.Popen(
+                            ['lpr', '-P', config.address, '-o', 'document-format=application/vnd.cups-raw'],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE
+                        )
+                        stdout, stderr = process.communicate(input=zpl_content.encode('utf-8'), timeout=10)
+                        
+                        if process.returncode == 0:
+                            return True
+                        else:
+                            print(f'lpr failed: {stderr.decode()}')
+                            
+                except Exception as e:
+                    print(f'macOS USB print attempt failed: {e}')
+                    
             if system == 'Linux':
                 # Try common USB device paths
                 usb_paths = [
@@ -242,24 +284,49 @@ class ZebraPrinterManager:
         system = platform.system()
         
         try:
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.zpl', delete=False) as f:
-                f.write(zpl_content)
-                temp_file = f.name
+            if system in ['Darwin', 'Linux']:  # macOS and Linux
+                # For macOS/Linux, try to send raw ZPL via stdin to lpr
+                try:
+                    process = subprocess.Popen(
+                        ['lpr', '-P', config.address, '-o', 'raw'],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                    )
+                    stdout, stderr = process.communicate(input=zpl_content.encode('utf-8'), timeout=10)
+                    
+                    if process.returncode != 0:
+                        return {
+                            'success': False,
+                            'message': f'Print command failed: {stderr.decode()}'
+                        }
+                    
+                    return {
+                        'success': True,
+                        'message': f'Successfully sent to USB printer {config.name}'
+                    }
+                except Exception as e:
+                    return {
+                        'success': False,
+                        'message': f'Error sending to printer: {str(e)}'
+                    }
             
-            try:
-                if system == 'Windows':
-                    # Use print command on Windows
+            elif system == 'Windows':
+                # Windows approach with temp file
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.zpl', delete=False) as f:
+                    f.write(zpl_content.encode('utf-8'))
+                    temp_file = f.name
+                
+                try:
                     subprocess.run(['print', '/d:' + config.address, temp_file], check=True, timeout=10)
-                
-                elif system in ['Darwin', 'Linux']:  # macOS and Linux
-                    # Use lp command
-                    subprocess.run(['lp', '-d', config.address, temp_file], check=True, timeout=10)
-                
-                return {
-                    'success': True,
-                    'message': f'Successfully sent to USB printer {config.name} via system'
-                }
+                    return {
+                        'success': True,
+                        'message': f'Successfully sent to USB printer {config.name}'
+                    }
+                finally:
+                    if os.path.exists(temp_file):
+                        os.unlink(temp_file)
             
             finally:
                 # Clean up temp file
@@ -332,73 +399,51 @@ class ZebraPrinterManager:
             # Get system printers (many USB printers appear here)
             system_printers = cls.get_system_printers()
             for printer_name in system_printers:
-                if 'zebra' in printer_name.lower() or 'zd410' in printer_name.lower():
+                # Include all printers, prioritize Zebra
+                if 'zebra' in printer_name.lower() or 'zd410' in printer_name.lower() or 'zd' in printer_name.lower():
                     discovered.append(PrinterInfo(
-                        name=f'USB: {printer_name}',
+                        name=printer_name,
+                        connection_type='usb',
+                        address=printer_name,
+                        port=0,
+                        status='available'
+                    ))
+                else:
+                    # Include other printers too
+                    discovered.append(PrinterInfo(
+                        name=printer_name,
                         connection_type='usb',
                         address=printer_name,
                         port=0,
                         status='available'
                     ))
             
-            # Check for direct USB devices
-            if system == 'Linux':
-                usb_devices = ['/dev/usb/lp0', '/dev/usb/lp1', '/dev/lp0', '/dev/lp1']
-                for device in usb_devices:
-                    if os.path.exists(device):
-                        discovered.append(PrinterInfo(
-                            name=f'USB Device ({device})',
-                            connection_type='usb',
-                            address=device,
-                            port=0,
-                            status='available'
-                        ))
-            
-            elif system == 'Darwin':  # macOS
-                import glob
-                usb_patterns = ['/dev/cu.usbmodem*', '/dev/cu.usbserial*']
-                for pattern in usb_patterns:
-                    for device in glob.glob(pattern):
-                        discovered.append(PrinterInfo(
-                            name=f'USB Device ({os.path.basename(device)})',
-                            connection_type='usb',
-                            address=device,
-                            port=0,
-                            status='available'
-                        ))
-            
-            elif system == 'Windows':
-                # Check COM ports
-                try:
-                    import serial.tools.list_ports
-                    ports = serial.tools.list_ports.comports()
-                    for port in ports:
-                        if 'zebra' in port.description.lower() or 'zd410' in port.description.lower():
+            # Check for direct USB devices only if no system printers found
+            if not discovered:
+                if system == 'Linux':
+                    usb_devices = ['/dev/usb/lp0', '/dev/usb/lp1', '/dev/lp0', '/dev/lp1']
+                    for device in usb_devices:
+                        if os.path.exists(device):
                             discovered.append(PrinterInfo(
-                                name=f'USB: {port.description}',
+                                name=f'USB Device ({device})',
                                 connection_type='usb',
-                                address=port.device,
+                                address=device,
                                 port=0,
                                 status='available'
                             ))
-                except ImportError:
-                    # pyserial not available, check common COM ports
-                    for i in range(1, 10):
-                        com_port = f'COM{i}'
-                        try:
-                            # Try to open the port briefly to test availability
-                            import serial
-                            with serial.Serial(com_port, 9600, timeout=0.1):
-                                pass
+                
+                elif system == 'Darwin':  # macOS
+                    import glob
+                    usb_patterns = ['/dev/cu.usbmodem*', '/dev/cu.usbserial*']
+                    for pattern in usb_patterns:
+                        for device in glob.glob(pattern):
                             discovered.append(PrinterInfo(
-                                name=f'USB: {com_port}',
+                                name=f'USB Device ({os.path.basename(device)})',
                                 connection_type='usb',
-                                address=com_port,
+                                address=device,
                                 port=0,
                                 status='available'
                             ))
-                        except:
-                            continue
         
         except Exception as e:
             print(f'Error discovering USB printers: {e}')
@@ -443,22 +488,32 @@ class ZebraPrinterManager:
             elif system == 'Darwin':  # macOS
                 # Use lpstat to list printers
                 result = subprocess.run(
-                    ['lpstat', '-p', '-d'],
+                    ['lpstat', '-p'],
                     capture_output=True,
                     text=True,
                     timeout=5
                 )
-                printers = [line.split()[1] for line in result.stdout.split('\n') if 'printer' in line]
+                # Parse lines like "printer Zebra_Technologies_ZTC_ZD410_203dpi_ZPL is idle..."
+                for line in result.stdout.split('\n'):
+                    if line.startswith('printer '):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            printers.append(parts[1])
             
             elif system == 'Linux':
                 # Use lpstat to list printers
                 result = subprocess.run(
-                    ['lpstat', '-p', '-d'],
+                    ['lpstat', '-p'],
                     capture_output=True,
                     text=True,
                     timeout=5
                 )
-                printers = [line.split()[1] for line in result.stdout.split('\n') if 'printer' in line]
+                # Parse lines like "printer Zebra_Printer is idle..."
+                for line in result.stdout.split('\n'):
+                    if line.startswith('printer '):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            printers.append(parts[1])
         
         except Exception as e:
             print(f'Error discovering system printers: {e}')
