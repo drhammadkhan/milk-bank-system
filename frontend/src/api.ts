@@ -94,15 +94,13 @@ export const samples = {
 export const bottles = {
   list: () => API.get('/bottles'),
   get: (id: string) => API.get(`/bottles/${id}`),
-  administer: (
-    id: string,
-    data: {
-      baby_id: string;
-      admin_user1: string;
-      admin_user2: string;
-      allocated_at?: string;
-    }
-  ) => API.post(`/bottles/${id}/administer`, data),
+  allocate: (id: string, data: { patient_id: string; allocated_by: string }) =>
+    API.post(`/bottles/${id}/allocate`, data),
+  defrost: (id: string) => API.post(`/bottles/${id}/defrost`),
+  administer: (id: string, data: { administered_by: string }) =>
+    API.post(`/bottles/${id}/administer`, data),
+  discard: (id: string, data: { reason: string }) =>
+    API.post(`/bottles/${id}/discard`, data),
 };
 
 // Hospital endpoints

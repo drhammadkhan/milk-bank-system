@@ -20,6 +20,14 @@ class DonorStatus(enum.Enum):
     Closed = "Closed"
 
 
+class BottleStatus(enum.Enum):
+    Available = "Available"
+    Allocated = "Allocated"
+    Defrosting = "Defrosting"
+    Administered = "Administered"
+    Discarded = "Discarded"
+
+
 class Donor(Base):
     __tablename__ = "donors"
     id = Column(String, primary_key=True, default=gen_uuid)
@@ -178,11 +186,16 @@ class Bottle(Base):
     barcode = Column(String, unique=True, index=True, nullable=False)
     batch_id = Column(String, ForeignKey("batches.id"), nullable=False)
     volume_ml = Column(Float, nullable=False)
+    status = Column(Enum(BottleStatus), nullable=False, default=BottleStatus.Available)
     label_print_id = Column(String)
     storage_location_id = Column(String)
     expiry = Column(DateTime(timezone=True))
     defrost_started_at = Column(DateTime(timezone=True))
     allocated_to = Column(String, nullable=True)
+    allocated_at = Column(DateTime(timezone=True), nullable=True)
+    administered_at = Column(DateTime(timezone=True), nullable=True)
+    administered_by = Column(String, nullable=True)
+    patient_id = Column(String, nullable=True)
     admin_status = Column(String, nullable=True)
 
 

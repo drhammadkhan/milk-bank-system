@@ -352,11 +352,114 @@ def get_batch(db: Session, batch_id: str):
 
 
 def get_all_bottles(db: Session):
-    return db.query(models.Bottle).all()
+    """Return bottles only from batches with 'Released' status with enriched data"""
+    bottles = db.query(models.Bottle).join(
+        models.Batch, models.Bottle.batch_id == models.Batch.id
+    ).filter(
+        models.Batch.status == models.BatchStatus.Released
+    ).all()
+    
+    # Enrich bottles with batch and pasteurisation information
+    result = []
+    for bottle in bottles:
+        batch = db.query(models.Batch).filter(models.Batch.id == bottle.batch_id).first()
+        pasteurisation = db.query(models.PasteurisationRecord).filter(
+            models.PasteurisationRecord.batch_id == bottle.batch_id
+        ).order_by(models.PasteurisationRecord.end_time.desc()).first()
+        
+        bottle_dict = {
+            "id": bottle.id,
+            "barcode": bottle.barcode,
+            "batch_id": bottle.batch_id,
+            "batch_code": batch.batch_code if batch else None,
+            "hospital_number": batch.hospital_number if batch else None,
+            "volume_ml": bottle.volume_ml,
+            "status": bottle.status.name if bottle.status else None,
+            "allocated_at": bottle.allocated_at,
+            "administered_at": bottle.administered_at,
+            "administered_by": bottle.administered_by,
+            "patient_id": bottle.patient_id,
+            "defrost_started_at": bottle.defrost_started_at,
+            "pasteurisation_date": pasteurisation.end_time if pasteurisation else None,
+        }
+        result.append(bottle_dict)
+    
+    return result
 
 
 def get_bottle(db: Session, bottle_id: str):
     return db.query(models.Bottle).filter(models.Bottle.id == bottle_id).first()
+
+
+def allocate_bottle(db: Session, bottle_id: str, patient_id: str, allocated_by: str):
+    """Allocate a bottle to a patient"""
+    from datetime import datetime, timezone
+    bottle = get_bottle(db, bottle_id)
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    if bottle.status != models.BottleStatus.Available:
+        raise IntegrityError(f"Bottle is not available (current status: {bottle.status.value})", params={}, orig=None)
+    
+    bottle.status = models.BottleStatus.Allocated
+    bottle.patient_id = patient_id
+    bottle.allocated_to = allocated_by
+    bottle.allocated_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(bottle)
+    return bottle
+
+
+def start_defrosting_bottle(db: Session, bottle_id: str):
+    """Mark bottle as defrosting"""
+    from datetime import datetime, timezone
+    bottle = get_bottle(db, bottle_id)
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    if bottle.status != models.BottleStatus.Allocated:
+        raise IntegrityError(f"Bottle must be allocated first (current status: {bottle.status.value})", params={}, orig=None)
+    
+    bottle.status = models.BottleStatus.Defrosting
+    bottle.defrost_started_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(bottle)
+    return bottle
+
+
+def administer_bottle(db: Session, bottle_id: str, administered_by: str):
+    """Mark bottle as administered"""
+    from datetime import datetime, timezone
+    bottle = get_bottle(db, bottle_id)
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    if bottle.status not in [models.BottleStatus.Defrosting, models.BottleStatus.Allocated]:
+        raise IntegrityError(f"Bottle must be allocated or defrosting (current status: {bottle.status.value})", params={}, orig=None)
+    
+    bottle.status = models.BottleStatus.Administered
+    bottle.administered_at = datetime.now(timezone.utc)
+    bottle.administered_by = administered_by
+    
+    db.commit()
+    db.refresh(bottle)
+    return bottle
+
+
+def discard_bottle(db: Session, bottle_id: str, reason: str):
+    """Mark bottle as discarded"""
+    bottle = get_bottle(db, bottle_id)
+    if not bottle:
+        raise IntegrityError("Bottle not found", params={}, orig=None)
+    
+    bottle.status = models.BottleStatus.Discarded
+    bottle.admin_status = reason
+    
+    db.commit()
+    db.refresh(bottle)
+    return bottle
 
 
 def get_all_dispatches(db: Session):
@@ -466,7 +569,7 @@ def _resolve_donations_for_batch(db: Session, donation_ids: list):
 
 
 def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, user_id: str = None, 
-                              batch_date = None, hospital_number: str = None, number_of_bottles: int = None):
+                              batch_date = None, hospital_number: str = None, number_of_bottles: int = None, bottle_volumes: list = None):
     # Resolve donation IDs to DonationRecord objects
     donations = _resolve_donations_for_batch(db, donation_ids)
     for d in donations:
@@ -513,6 +616,23 @@ def assign_donations_to_batch(db: Session, donation_ids: list, batch_code: str, 
     db.add(batch)
     db.commit()
     db.refresh(batch)
+
+    # Create bottles if number_of_bottles is specified
+    if number_of_bottles and number_of_bottles > 0:
+        from .barcode import gen_uuid
+        
+        for i in range(number_of_bottles):
+            # Use volume from bottle_volumes array if provided, otherwise default to 50ml
+            if bottle_volumes and i < len(bottle_volumes):
+                bottle_volume = bottle_volumes[i]
+            else:
+                bottle_volume = 50.0  # Default to 50ml
+            
+            code = gen_uuid()
+            bt = models.Bottle(barcode=code, batch_id=batch.id, volume_ml=bottle_volume)
+            db.add(bt)
+            db.flush()
+            _create_audit(db, user_id, "create", "bottle", bt.id, before=None, after={"barcode": bt.barcode, "batch_id": batch.id, "volume_ml": bottle_volume})
 
     from .state_machines import transition_donation_state
     from transitions.core import MachineError
@@ -675,6 +795,11 @@ def process_post_pasteurisation_results(db: Session, batch_id: str, user_id: str
             # Only release if not already released
             if b.status != models.BatchStatus.Released:
                 transition_batch_state(b, 'release')
+                
+                # Set all bottles in this batch to Available status
+                bottles = db.query(models.Bottle).filter(models.Bottle.batch_id == batch_id).all()
+                for bottle in bottles:
+                    bottle.status = models.BottleStatus.Available
             
             _create_audit(db, user_id or 'system', "auto_release", "batch", b.id, 
                          before=before, after={"status": b.status.name, "reason": "negative_post_pasteurisation"})

@@ -113,12 +113,12 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-gray-600">Welcome to Milk Bank Traceability System</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-sm lg:text-base text-gray-600">Welcome to Milk Bank Traceability System</p>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="text-sm font-semibold text-gray-700">Version {VERSION}</p>
             <p className="text-xs text-gray-500 mt-1">Last updated: {LAST_UPDATED}</p>
           </div>
@@ -126,19 +126,19 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
             <Link to={card.href} key={card.title}>
-              <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+              <div className="bg-white rounded-lg shadow p-4 lg:p-6 hover:shadow-lg transition cursor-pointer touch-manipulation">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-600 text-sm font-medium">{card.title}</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{card.value}</p>
+                    <p className="text-gray-600 text-xs lg:text-sm font-medium">{card.title}</p>
+                    <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-2">{card.value}</p>
                   </div>
-                  <div className={`${card.color} p-3 rounded-lg`}>
-                    <Icon size={24} />
+                  <div className={`${card.color} p-2 lg:p-3 rounded-lg`}>
+                    <Icon size={20} className="lg:w-6 lg:h-6" />
                   </div>
                 </div>
               </div>
@@ -148,69 +148,69 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-lg shadow p-4 lg:p-6">
+        <h2 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Link
             to="/donors/new"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition"
+            className="p-3 lg:p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition touch-manipulation"
           >
-            <Users className="text-blue-600 mb-2" size={24} />
-            <p className="font-medium text-gray-900">Register New Donor</p>
-            <p className="text-sm text-gray-600">Start onboarding process</p>
+            <Users className="text-blue-600 mb-2" size={20} />
+            <p className="font-medium text-gray-900 text-sm lg:text-base">Register New Donor</p>
+            <p className="text-xs lg:text-sm text-gray-600">Start onboarding process</p>
           </Link>
 
           <Link
             to="/batches/new"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-green-50 transition"
+            className="p-3 lg:p-4 border border-gray-200 rounded-lg hover:bg-green-50 transition touch-manipulation"
           >
-            <Package className="text-green-600 mb-2" size={24} />
-            <p className="font-medium text-gray-900">Create Batch</p>
-            <p className="text-sm text-gray-600">Assign donations to batch</p>
+            <Package className="text-green-600 mb-2" size={20} />
+            <p className="font-medium text-gray-900 text-sm lg:text-base">Create Batch</p>
+            <p className="text-xs lg:text-sm text-gray-600">Assign donations to batch</p>
           </Link>
 
           <Link
             to="/dispatch/new"
-            className="p-4 border border-gray-200 rounded-lg hover:bg-purple-50 transition"
+            className="p-3 lg:p-4 border border-gray-200 rounded-lg hover:bg-purple-50 transition touch-manipulation"
           >
-            <Truck className="text-purple-600 mb-2" size={24} />
-            <p className="font-medium text-gray-900">Create Dispatch</p>
-            <p className="text-sm text-gray-600">Prepare for hospital shipment</p>
+            <Truck className="text-purple-600 mb-2" size={20} />
+            <p className="font-medium text-gray-900 text-sm lg:text-base">Create Dispatch</p>
+            <p className="text-xs lg:text-sm text-gray-600">Prepare for hospital shipment</p>
           </Link>
         </div>
       </div>
 
       {/* New Donations Alert */}
       {newDonations.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">
-              <Droplets className="text-blue-600" size={28} />
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-4 lg:p-6">
+          <div className="flex flex-col sm:flex-row items-start gap-3 lg:gap-4">
+            <div className="flex-shrink-0">
+              <Droplets className="text-blue-600" size={24} />
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-blue-900 mb-1">
+            <div className="flex-1 w-full">
+              <h3 className="text-base lg:text-lg font-bold text-blue-900 mb-1">
                 🎉 New Milk Donations Received!
               </h3>
-              <p className="text-blue-800 mb-4">
+              <p className="text-sm lg:text-base text-blue-800 mb-3 lg:mb-4">
                 The core team has {newDonations.length} new donation{newDonations.length !== 1 ? 's' : ''} to acknowledge:
               </p>
-              <div className="space-y-3">
+              <div className="space-y-2 lg:space-y-3">
                 {newDonations.map((donation: any) => {
                   const donationDate = new Date(donation.donation_date);
                   const formattedDate = donationDate.toLocaleDateString();
                   return (
                     <div
                       key={donation.id}
-                      className="bg-white rounded-lg p-3 flex items-center justify-between"
+                      className="bg-white rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base">
                           {donation.donation_id && (
-                            <span className="text-blue-600 font-mono text-sm mr-2">{donation.donation_id}</span>
+                            <span className="text-blue-600 font-mono text-xs lg:text-sm mr-2">{donation.donation_id}</span>
                           )}
                           {donation.number_of_bottles} bottle{donation.number_of_bottles !== 1 ? 's' : ''} donated
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs lg:text-sm text-gray-600">
                           {formattedDate}
                           {donation.notes && ` • ${donation.notes}`}
                         </p>
@@ -218,9 +218,9 @@ export const Dashboard: React.FC = () => {
                       <button
                         onClick={() => handleAcknowledge(donation.id)}
                         disabled={acknowledging === donation.id}
-                        className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                        className="w-full sm:w-auto px-3 lg:px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap touch-manipulation"
                       >
-                        <Check size={18} />
+                        <Check size={16} />
                         {acknowledging === donation.id ? 'Acknowledging...' : 'Acknowledge'}
                       </button>
                     </div>
@@ -233,9 +233,9 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="flex items-center text-gray-600">
+      <div className="bg-white rounded-lg shadow p-4 lg:p-6">
+        <h2 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+        <div className="flex items-center text-sm lg:text-base text-gray-600">
           <Clock size={16} className="mr-2" />
           {stats.recentActivity}
         </div>

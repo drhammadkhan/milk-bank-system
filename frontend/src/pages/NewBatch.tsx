@@ -9,6 +9,7 @@ export const NewBatch: React.FC = () => {
   const [batchDate, setBatchDate] = useState(today);
   const [hospitalNumber, setHospitalNumber] = useState('');
   const [numberOfBottles, setNumberOfBottles] = useState('');
+  const [bottleVolumes, setBottleVolumes] = useState<string[]>([]);
   const [donationIds, setDonationIds] = useState('');
   const [donorName, setDonorName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -118,6 +119,21 @@ export const NewBatch: React.FC = () => {
     }
   };
 
+  // Update bottle volumes array when number of bottles changes
+  useEffect(() => {
+    const num = parseInt(numberOfBottles);
+    if (!isNaN(num) && num > 0) {
+      // If current array is shorter, add more bottles with default 50ml
+      // If longer, trim the array
+      const newVolumes = Array(num).fill('').map((_, i) => 
+        bottleVolumes[i] || '50'
+      );
+      setBottleVolumes(newVolumes);
+    } else {
+      setBottleVolumes([]);
+    }
+  }, [numberOfBottles]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -158,6 +174,8 @@ export const NewBatch: React.FC = () => {
 
       if (numberOfBottles && !isNaN(Number(numberOfBottles))) {
         batchData.number_of_bottles = parseInt(numberOfBottles);
+        // Send bottle volumes as array of floats
+        batchData.bottle_volumes = bottleVolumes.map(v => parseFloat(v) || 50);
       }
 
       const response = await batches.create(batchData);
@@ -311,6 +329,38 @@ export const NewBatch: React.FC = () => {
               Total number of bottles in this batch
             </p>
           </div>
+
+          {bottleVolumes.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bottle Volumes (mL)
+              </label>
+              <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                {bottleVolumes.map((volume, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600 w-20">Bottle {index + 1}:</span>
+                    <input
+                      type="number"
+                      value={volume}
+                      onChange={(e) => {
+                        const newVolumes = [...bottleVolumes];
+                        newVolumes[index] = e.target.value;
+                        setBottleVolumes(newVolumes);
+                      }}
+                      placeholder="50"
+                      min="1"
+                      step="0.1"
+                      className="flex-1 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    />
+                    <span className="text-sm text-gray-500">mL</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Specify volume for each bottle (default: 50 mL)
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

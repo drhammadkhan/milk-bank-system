@@ -13,9 +13,10 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import evelinaLogo from '../assets/evelina-logo.png';
+import milkBankIcon from '../assets/Milkbank-software-icon.png';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const location = useLocation();
 
   const navItems = [
@@ -28,45 +29,55 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const isActive = (href: string) => location.pathname === href;
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* Sidebar */}
       <div
         className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-900 text-white transition-all duration-300 flex flex-col`}
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30 w-64 bg-gray-900 text-white transition-transform duration-300 flex flex-col`}
       >
         {/* Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <div className={`flex items-center gap-2 ${!sidebarOpen && 'hidden'}`}>
+          <div className="flex items-center gap-2">
             <Beaker size={24} />
             <span className="font-bold">MilkBank</span>
           </div>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-gray-800 rounded transition"
+            onClick={closeSidebar}
+            className="p-1 hover:bg-gray-800 rounded transition lg:hidden"
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            <X size={20} />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                onClick={closeSidebar}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition touch-manipulation ${
                   isActive(item.href)
                     ? 'bg-blue-600 text-white'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
-                title={item.label}
               >
                 <Icon size={20} />
-                {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             );
           })}
@@ -76,39 +87,51 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <div className="p-4 border-t border-gray-800 space-y-2">
           <Link
             to="/settings/printers"
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+            onClick={closeSidebar}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition touch-manipulation ${
               isActive('/settings/printers')
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-300 hover:bg-gray-800'
             }`}
           >
             <Settings size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Printer Settings</span>}
+            <span className="text-sm font-medium">Printer Settings</span>
           </Link>
-          <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg transition touch-manipulation">
             <LogOut size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
+            <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto lg:ml-0">
         {/* Top Bar */}
-        <div className="bg-white shadow">
-          <div className="px-8 py-4 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold text-gray-900">Evelina Nicu Milk Bank Tracking System</h2>
-              <img src={evelinaLogo} alt="Evelina London" className="h-12" />
+        <div className="bg-white shadow sticky top-0 z-10">
+          <div className="px-4 lg:px-8 py-3 lg:py-4 flex justify-between items-center">
+            <div className="flex items-center gap-2 lg:gap-4">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg lg:hidden touch-manipulation"
+              >
+                <Menu size={24} />
+              </button>
+              <h2 className="text-sm lg:text-lg font-semibold text-gray-900 hidden sm:block">
+                Evelina Nicu Milk Bank Tracking System
+              </h2>
+              <h2 className="text-sm font-semibold text-gray-900 sm:hidden">MilkBank</h2>
+              <img src={evelinaLogo} alt="Evelina London" className="h-8 lg:h-12 hidden sm:block" />
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">User: Admin</span>
+            <div className="flex items-center gap-2 lg:gap-4">
+              <span className="text-xs lg:text-sm text-gray-600 hidden md:block">User: Admin</span>
+              <img src={milkBankIcon} alt="Milk Bank" className="h-8 lg:h-12" />
             </div>
           </div>
         </div>
 
         {/* Page Content */}
-        <div className="p-8">
+        <div className="p-4 lg:p-8">
           {children}
         </div>
       </div>

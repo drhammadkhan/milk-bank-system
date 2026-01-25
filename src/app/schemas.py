@@ -305,6 +305,7 @@ class BatchCreate(BaseModel):
     batch_date: Optional[Union[str, datetime]] = None
     hospital_number: Optional[str] = None
     number_of_bottles: Optional[int] = None
+    bottle_volumes: Optional[List[float]] = None
     
     @field_validator('batch_date', mode='before')
     @classmethod

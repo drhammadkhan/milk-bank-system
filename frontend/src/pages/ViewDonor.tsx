@@ -31,7 +31,7 @@ export const ViewDonor: React.FC = () => {
   const [donorDonations, setDonorDonations] = useState<any[]>([]);
   const [showAddDonation, setShowAddDonation] = useState(false);
   const today = new Date().toISOString().split('T')[0];
-  const [newDonation, setNewDonation] = useState({ donation_date: today, number_of_bottles: 1, notes: '' });
+  const [newDonation, setNewDonation] = useState({ donation_date: today, number_of_bottles: 1, volume_ml: 0, notes: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const loadDonations = async () => {
@@ -67,7 +67,7 @@ export const ViewDonor: React.FC = () => {
 
   const handleAddDonation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDonation.donation_date || newDonation.number_of_bottles < 1) {
+    if (!newDonation.donation_date || newDonation.number_of_bottles < 1 || newDonation.volume_ml <= 0) {
       alert('Please fill in all required fields');
       return;
     }
@@ -78,10 +78,11 @@ export const ViewDonor: React.FC = () => {
         donor_id: donorId!,
         donation_date: newDonation.donation_date,
         number_of_bottles: newDonation.number_of_bottles,
+        volume_ml: newDonation.volume_ml,
         notes: newDonation.notes || undefined,
       });
       const resetToday = new Date().toISOString().split('T')[0];
-      setNewDonation({ donation_date: resetToday, number_of_bottles: 1, notes: '' });
+      setNewDonation({ donation_date: resetToday, number_of_bottles: 1, volume_ml: 0, notes: '' });
       setShowAddDonation(false);
       await loadDonations();
     } catch (err: any) {
@@ -302,7 +303,7 @@ export const ViewDonor: React.FC = () => {
           {showAddDonation && (
             <form onSubmit={handleAddDonation} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
               <h4 className="font-semibold text-gray-900">Record New Donation</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Donation Date <span className="text-red-500">*</span>
@@ -312,6 +313,21 @@ export const ViewDonor: React.FC = () => {
                     value={newDonation.donation_date}
                     onChange={(e) => setNewDonation({ ...newDonation, donation_date: e.target.value })}
                     required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Volume (mL) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={newDonation.volume_ml || ''}
+                    onChange={(e) => setNewDonation({ ...newDonation, volume_ml: parseFloat(e.target.value) || 0 })}
+                    required
+                    placeholder="e.g., 100"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>

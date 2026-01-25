@@ -146,7 +146,8 @@ def create_batch(batch_create: schemas.BatchCreate, db: Session = Depends(get_db
             user_id=None,  # TODO: get from authentication
             batch_date=batch_create.batch_date,
             hospital_number=batch_create.hospital_number,
-            number_of_bottles=batch_create.number_of_bottles
+            number_of_bottles=batch_create.number_of_bottles,
+            bottle_volumes=batch_create.bottle_volumes
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -294,6 +295,9 @@ def process_post_pasteurisation(batch_id: str, db: Session = Depends(get_db), us
     try:
         b = crud.process_post_pasteurisation_results(db, batch_id, user_id=user_id)
     except Exception as e:
+        import traceback
+        print(f"Error processing post-pasteurisation: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
     return {"batch_id": b.id, "status": b.status.name}
 
@@ -381,6 +385,44 @@ def get_bottle(bottle_id: str, db: Session = Depends(get_db)):
     if not b:
         raise HTTPException(status_code=404, detail="Bottle not found")
     return b
+
+
+@router.post("/bottles/{bottle_id}/allocate")
+def allocate_bottle(bottle_id: str, payload: dict, db: Session = Depends(get_db)):
+    try:
+        patient_id = payload.get("patient_id")
+        allocated_by = payload.get("allocated_by", "system")
+        if not patient_id:
+            raise HTTPException(status_code=400, detail="patient_id is required")
+        return crud.allocate_bottle(db, bottle_id, patient_id, allocated_by)
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/bottles/{bottle_id}/defrost")
+def start_defrosting(bottle_id: str, db: Session = Depends(get_db)):
+    try:
+        return crud.start_defrosting_bottle(db, bottle_id)
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/bottles/{bottle_id}/administer")
+def administer_bottle(bottle_id: str, payload: dict, db: Session = Depends(get_db)):
+    try:
+        administered_by = payload.get("administered_by", "system")
+        return crud.administer_bottle(db, bottle_id, administered_by)
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/bottles/{bottle_id}/discard")
+def discard_bottle(bottle_id: str, payload: dict, db: Session = Depends(get_db)):
+    try:
+        reason = payload.get("reason", "")
+        return crud.discard_bottle(db, bottle_id, reason)
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/dispatches")

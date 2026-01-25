@@ -327,11 +327,6 @@ class ZebraPrinterManager:
                 finally:
                     if os.path.exists(temp_file):
                         os.unlink(temp_file)
-            
-            finally:
-                # Clean up temp file
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
         
         except subprocess.CalledProcessError as e:
             return {
