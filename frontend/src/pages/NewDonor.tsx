@@ -722,9 +722,19 @@ export const NewDonor: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="space-y-2">
-                  {['hiv1', 'hiv2', 'htlv1', 'htlv2', 'hep_b', 'hep_c', 'syphilis'].map((test) => (
+                  {['hiv1', 'hiv2', 'htlv1', 'htlv2', 'hep_b', 'hep_c', 'syphilis'].map((test) => {
+                    const testLabels: {[key: string]: string} = {
+                      hiv1: 'HIV1',
+                      hiv2: 'HIV2',
+                      htlv1: 'HTLV1',
+                      htlv2: 'HTLV2',
+                      hep_b: 'Hep B',
+                      hep_c: 'Hep C',
+                      syphilis: 'Syphilis',
+                    };
+                    return (
                     <tr key={test} className="border-b border-gray-200">
-                      <td className="px-2 py-2 text-sm text-gray-700 capitalize">{test.replace(/_/g, ' ')}</td>
+                      <td className="px-2 py-2 text-sm text-gray-700">{testLabels[test]}</td>
                       <td className="px-2 py-2">
                         <select
                           name={`initial_${test}_result`}
@@ -740,7 +750,8 @@ export const NewDonor: React.FC = () => {
                         </select>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

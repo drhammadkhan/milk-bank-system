@@ -1,0 +1,20 @@
+INFO:     Will watch for changes in these directories: ['/Users/hammadkhan/Code/milk-bank-system']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [83503] using WatchFiles
+/Users/hammadkhan/Code/milk-bank-system/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [83603]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:61203 - "GET /api/donors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61202 - "GET /api/batches/21edb651-2b10-4ca9-9569-794c6379053b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61206 - "GET /api/donors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61207 - "GET /api/batches/21edb651-2b10-4ca9-9569-794c6379053b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61427 - "GET /api/donors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61433 - "GET /api/batches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61435 - "GET /api/dispatches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61439 - "GET /api/donors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61445 - "GET /api/batches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61447 - "GET /api/dispatches HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61451 - "GET /api/donations/unacknowledged HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61455 - "GET /api/donations/unacknowledged HTTP/1.1" 200 OK
