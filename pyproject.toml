@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "milkbank"
-version = "0.1.0"
+version = "1.1.0"
 description = "Traceable milk bank backend"
 authors = ["Your Team <you@example.com>"]
 

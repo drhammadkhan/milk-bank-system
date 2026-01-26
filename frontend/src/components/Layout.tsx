@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import evelinaLogo from '../assets/evelina-logo.png';
-import milkBankIcon from '../assets/Milkbank-software-icon.png';
+const milkBankIcon = '/milk-bank-icon.png';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
@@ -118,7 +118,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <Menu size={24} />
               </button>
               <h2 className="text-sm lg:text-lg font-semibold text-gray-900 hidden sm:block">
-                Evelina Nicu Milk Bank Tracking System
+                Evelina Nicu Milk Bank Tracker
               </h2>
               <h2 className="text-sm font-semibold text-gray-900 sm:hidden">MilkBank</h2>
               <img src={evelinaLogo} alt="Evelina London" className="h-8 lg:h-12 hidden sm:block" />

@@ -116,7 +116,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-sm lg:text-base text-gray-600">Welcome to Milk Bank Traceability System</p>
+            <p className="mt-2 text-sm lg:text-base text-gray-600">Welcome to Milk Bank Tracker</p>
           </div>
           <div className="text-left sm:text-right">
             <p className="text-sm font-semibold text-gray-700">Version {VERSION}</p>
